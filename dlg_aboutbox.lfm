@@ -1,0 +1,56 @@
+object AboutBox: TAboutBox
+  Left = 844
+  Height = 169
+  Top = 470
+  Width = 278
+  BorderStyle = bsDialog
+  Caption = 'About'
+  ClientHeight = 169
+  ClientWidth = 278
+  Color = clWindow
+  OnCreate = FormCreate
+  OnShow = FormShow
+  Position = poScreenCenter
+  LCLVersion = '2.0.7.0'
+  object LbName: TLabel
+    Left = 8
+    Height = 21
+    Top = 16
+    Width = 141
+    Caption = 'Ruud''s ModPlayer V'
+    Font.Height = -16
+    ParentColor = False
+    ParentFont = False
+  end
+  object LbAuthor: TLabel
+    Left = 8
+    Height = 21
+    Top = 48
+    Width = 152
+    Caption = 'by Rudolf Cornelissen'
+    Font.Height = -16
+    ParentColor = False
+    ParentFont = False
+  end
+  object LbCopyRight: TLabel
+    Left = 8
+    Height = 21
+    Top = 80
+    Width = 107
+    Caption = '(c) 2019 - 2020'
+    Font.Height = -16
+    ParentColor = False
+    ParentFont = False
+  end
+  object BitBtn1: TBitBtn
+    Left = 96
+    Height = 30
+    Top = 120
+    Width = 91
+    Default = True
+    DefaultCaption = True
+    Kind = bkOK
+    ModalResult = 1
+    TabOrder = 0
+  end
+end

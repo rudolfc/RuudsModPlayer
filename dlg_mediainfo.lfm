@@ -1,0 +1,75 @@
+object FrmMediaInfo: TFrmMediaInfo
+  Left = 482
+  Height = 480
+  Top = 184
+  Width = 640
+  Caption = 'Media info'
+  ClientHeight = 480
+  ClientWidth = 640
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  LCLVersion = '2.0.7.0'
+  object ListBox1: TListBox
+    AnchorSideBottom.Control = BitBtn1
+    Left = 0
+    Height = 430
+    Top = 0
+    Width = 640
+    Align = alTop
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderSpacing.Bottom = 10
+    ItemHeight = 0
+    MultiSelect = True
+    TabOrder = 0
+  end
+  object BitBtn1: TBitBtn
+    AnchorSideLeft.Side = asrBottom
+    Left = 258
+    Height = 26
+    Top = 440
+    Width = 88
+    Align = alCustom
+    Anchors = [akBottom]
+    Default = True
+    DefaultCaption = True
+    Kind = bkOK
+    ModalResult = 1
+    OnClick = BitBtn1Click
+    TabOrder = 1
+  end
+  object BtSaveInfo: TBitBtn
+    Left = 138
+    Height = 26
+    Top = 440
+    Width = 83
+    Anchors = [akBottom]
+    Caption = 'Save Info'
+    OnClick = BtSaveInfoClick
+    TabOrder = 2
+  end
+  object BtClearTxt: TBitBtn
+    Left = 20
+    Height = 26
+    Top = 440
+    Width = 83
+    Anchors = [akBottom]
+    Caption = 'Clear text'
+    OnClick = BtClearTxtClick
+    TabOrder = 3
+  end
+  object CbDmpTables: TCheckBox
+    Left = 421
+    Height = 19
+    Top = 440
+    Width = 128
+    Anchors = [akBottom]
+    Caption = 'Dump pattern tables'
+    OnChange = CbDmpTablesChange
+    TabOrder = 4
+  end
+  object SaveDialog1: TSaveDialog
+    Filter = 'Text file|*.txt'
+    Left = 304
+    Top = 51
+  end
+end

@@ -1,0 +1,51 @@
+object MPSettings: TMPSettings
+  Left = 644
+  Height = 266
+  Top = 232
+  Width = 383
+  BorderIcons = [biSystemMenu]
+  Caption = 'Modplayer settings'
+  ClientHeight = 266
+  ClientWidth = 383
+  OnCreate = FormCreate
+  OnPaint = FormPaint
+  LCLVersion = '2.0.7.0'
+  object CB_TVStandard: TComboBox
+    Left = 80
+    Height = 23
+    Top = 16
+    Width = 72
+    ItemHeight = 15
+    OnChange = CB_TVStandardChange
+    ParentShowHint = False
+    Style = csDropDownList
+    TabOrder = 0
+  end
+  object Label1: TLabel
+    Left = 8
+    Height = 15
+    Top = 20
+    Width = 64
+    Caption = 'TV Standard'
+    ParentColor = False
+  end
+  object CB_SampleRate: TComboBox
+    Left = 80
+    Height = 23
+    Top = 44
+    Width = 72
+    ItemHeight = 15
+    OnChange = CB_SampleRateChange
+    ParentShowHint = False
+    Style = csDropDownList
+    TabOrder = 1
+  end
+  object Label2: TLabel
+    Left = 8
+    Height = 15
+    Top = 48
+    Width = 62
+    Caption = 'Sample rate'
+    ParentColor = False
+  end
+end

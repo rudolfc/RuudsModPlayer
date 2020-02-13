@@ -1,0 +1,30 @@
+
+Hi!
+
+Below I have collected most of the online documentation I am using to create my very own modplayer.
+I am doing this with Lazarus-IDE, so with FPC (FreePascal).
+
+Note please that the documentation is very helpfull, but does not cover all the details. I've been
+testing/comparing/trying different 'tweaks' to the player going on as much files as is possible.
+
+My initial sound files used are those from Pinball Dreams and Pinball Fantasies. These files run
+all OK now (except for missing Arpeggio effect, I'll add that of course..)
+
+Have fun with this stuff!
+
+
+Interesting internet resources for fileformat / player logic information:
+
+https://en.wikipedia.org/wiki/MOD_%28file_format%29
+ftp://ftp.modland.com/pub/documents/format_documentation/FireLight%20MOD%20Player%20Tutorial.txt
+http://fileformats.archiveteam.org/wiki/Amiga_Module
+https://wiki.multimedia.cx/index.php?title=Protracker_Module#Axy
+
+
+Rudolf Cornelissen.
+
+File last edited on 2020-02-13.
+
+
+
+
