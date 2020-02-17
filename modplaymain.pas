@@ -387,7 +387,10 @@ end;
 
 procedure TModMain.FormCreate(Sender: TObject);
 var
-  a: Integer;
+  a       : Integer;
+  {$IFDEF MSWINDOWS}
+  WinVer  : Single;
+  {$ENDIF}
 begin
   for a := 0 to NumAudioBufs-1 do
   begin
@@ -412,7 +415,16 @@ begin
 
   (* use TFPTimer *)
   IO_Timer := TFPTimer.Create(nil);
-  IO_Timer.UseTimerThread := True; (* Laz: Improves accuracy a lot! (now +/- 2-3mS variation, otherwise +/- 10mS..) *)
+
+  {$IFDEF MSWINDOWS}
+  RunDecInfo.Items.Add('Windows version ' + IntToStr(Win32MajorVersion) + '.' + IntToStr(Win32MinorVersion));
+  WinVer := Win32MajorVersion + Win32MinorVersion;
+  if WinVer < 6.1 then
+    IO_Timer.UseTimerThread := False (* Laz: XP SP3 totally messes up here if a seperate thread is used.. *)
+  else
+  {$ENDIF}
+    IO_Timer.UseTimerThread := True; (* Laz: Improves accuracy a lot! (now +/- 2-3mS variation, otherwise +/- 10mS..) *)
+
   IO_Timer.Interval := 5; (* The shortest interval needed is 9.8mS (255 BPM) so this is fast enough and it may even vary.. *)
   IO_Timer.Enabled := False;
   IO_Timer.OnTimer := ExecTick;
