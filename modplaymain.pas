@@ -702,17 +702,10 @@ begin
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
 
-      if (PatDecode.EffectParam shr 4) = $a then (* cmd: effect Fine Volume Slide Up *)
+      if (PatDecode.EffectParam shr 4) = $c then (* cmd: effect Cut Note *)
       begin
-        //fixme: add Fine Volume Slide Up (i.e. Vinnie_ Sweet Dreams, song start)
-        RunDecInfo.Items.Add('Warning: Fine Volume Slide Up not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
-
-      if (PatDecode.EffectParam shr 4) = $b then (* cmd: effect Fine Volume Slide Down *)
-      begin
-        //fixme: add Fine Volume Slide Down (i.e. Vinnie_ Sweet Dreams, song pos 4 - table 22)
-        RunDecInfo.Items.Add('Warning: Fine Volume Slide Down not yet implemented!');
+        //fixme: add Cut Note
+        RunDecInfo.Items.Add('Warning: Cut Note not yet implemented!');
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
 
@@ -729,13 +722,13 @@ begin
         RunDecInfo.Items.Add('Warning: Pattern Delay not yet implemented!');
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
-
-      (* we don't implement other $exx effects as they aren't used in practice apparantly. *)
     end;
   end;
 end;
 
 procedure DoVolParamUpdate(NewNote: Boolean);
+var
+  MyParam : Integer;
 begin
   with MySongLogic[MyCh] do
   begin
@@ -755,6 +748,27 @@ begin
         else
           if PatDecode.EffectParam and $0f <> 0 then //slide down
             MyVolSlide := (PatDecode.EffectParam and $0f) * -1;
+      end;
+    end;
+
+    if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
+    begin
+      if (PatDecode.EffectParam shr 4) = $a then (* cmd: effect Fine Volume Slide Up *)
+      begin
+        MyParam := PatDecode.EffectParam and $0f;
+        if (MyVolume + MyParam) <= 64 then
+          Inc(MyVolume, MyParam)
+        else
+          MyVolume := 64;
+      end;
+
+      if (PatDecode.EffectParam shr 4) = $b then (* cmd: effect Fine Volume Slide Down *)
+      begin
+        MyParam := PatDecode.EffectParam and $0f;
+        if MyVolume - MyParam >= 0 then
+          Dec(MyVolume, MyParam)
+        else
+          MyVolume := 0;
       end;
     end;
 
