@@ -20,10 +20,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="ModPlayMain"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="697"/>
-        <CursorPos X="42" Y="757"/>
+        <TopLine Value="2112"/>
+        <CursorPos X="7" Y="2129"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -56,9 +55,10 @@
         <Filename Value="globalvars.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalVars"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="82"/>
-        <CursorPos X="17" Y="106"/>
+        <CursorPos X="50" Y="95"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
@@ -83,7 +83,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="73"/>
         <CursorPos X="35" Y="88"/>
-        <UsageCount Value="44"/>
+        <UsageCount Value="46"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
@@ -155,8 +155,8 @@
       <Unit16>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\packages\fcl-base\src\fptimer.pp"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="58"/>
-        <CursorPos X="20" Y="71"/>
+        <TopLine Value="66"/>
+        <CursorPos X="18" Y="82"/>
         <UsageCount Value="10"/>
       </Unit16>
       <Unit17>

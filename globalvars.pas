@@ -106,6 +106,7 @@ var
   OrigFormatFile,
   MySongPaused             : Boolean;
   WaveOutIsOpen            : Boolean;
+  OrigFmtTmrSpeed          : Single;
   MySampleInfo             : array [0..30] of TModPlaySampleInfo;
 
 implementation

@@ -118,6 +118,7 @@ Type
     MyVibDepth,
     OldVibSpeed,
     OldVibDepth,
+    MyCutNote,
     RetrigEvery     : Integer;
     MyPatTabRunning,
     MyPatBreak,
@@ -216,7 +217,7 @@ Type
 
 
     procedure ExecTick(Sender: TObject);
-    procedure UpdateMyVolSlide(MyCh: Integer);
+    procedure UpdateMyVolSlide(MyCh, MyTick: Integer);
     //procedure SetMyVolSliderMax;
     procedure ExecNote(MyCh: Integer);
 
@@ -311,7 +312,7 @@ BEGIN
     while not AllBufsDone do sleep(5);
 
   (* We're done (note: 'StopPlaying' stops the timer again) *)
-  IO_Timer.Enabled := True;
+  if not MyAppClosing then IO_Timer.Enabled := True;
 
   (* Check/execute Stop *)
   if StoppingMySong or MyAppClosing then StopPlaying;
@@ -412,6 +413,8 @@ begin
   MySongStartPos := 0;
   TFileRec(MyWaveFile).Mode := fmClosed;
   MyOpenInFile := '';
+  OrigFormatFile := False;
+  OrigFmtTmrSpeed := DefaultTmrSpeed;
 
   (* use TFPTimer *)
   IO_Timer := TFPTimer.Create(nil);
@@ -600,8 +603,13 @@ begin
         MyVibDepth := 0;
         OldVibSpeed := 0;
         OldVibDepth := 0;
+        (* No Cutnote active *)
+        MyCutNote := -1;
         (* Set default speed (request) *)
-        MyTmrInterval := DefaultTmrSpeed;
+        if OrigFormatFile then
+          MyTmrInterval := OrigFmtTmrSpeed
+        else
+          MyTmrInterval := DefaultTmrSpeed;
         MyTickSpeed := DefaultTckSpeed;
         (* We are _starting_ a song *)
         MySongEnding := False;
@@ -634,7 +642,10 @@ begin
     end;
 
     (* Set default speed (Actual) *)
-    ActTmrInterval := DefaultTmrSpeed;
+    if OrigFormatFile then
+      ActTmrInterval := OrigFmtTmrSpeed
+    else
+      ActTmrInterval := DefaultTmrSpeed;
     ActTckSpeed := DefaultTckSpeed;
   end;
 
@@ -642,11 +653,11 @@ begin
   IO_Timer.Enabled := True;
 end;
 
-procedure TModMain.UpdateMyVolSlide(MyCh: Integer);
+procedure TModMain.UpdateMyVolSlide(MyCh, MyTick: Integer);
 begin
-  (* update our current volume in accorance with effect 10 and 12.. *)
   with MySongLogic[MyCh] do
   begin
+    (* update our current volume in accorance with effect 10 and 12.. *)
     if MyVolSlide + MyVolume >= 64 then
     begin
       MyVolume := 64;
@@ -661,6 +672,13 @@ begin
       end
       else
         MyVolume := MyVolume + MyVolSlide;
+    end;
+
+    (* execute effect Cut Note if requested *)
+    if MyTick = MyCutNote then
+    begin
+      MyVolume := 0;
+      MyVolSlide := 0;
     end;
   end;
 
@@ -702,11 +720,11 @@ begin
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
 
+      MyCutNote := -1;
       if (PatDecode.EffectParam shr 4) = $c then (* cmd: effect Cut Note *)
       begin
-        //fixme: add Cut Note
-        RunDecInfo.Items.Add('Warning: Cut Note not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+        (* Please note: if MyCutNote is zero then it's ignored (seems correct, specified). *)
+        MyCutNote := PatDecode.EffectParam and $0f;
       end;
 
       if (PatDecode.EffectParam shr 4) = $d then (* cmd: effect Delay Note *)
@@ -1239,6 +1257,8 @@ begin
     MyVibDepth := 0;
     OldVibSpeed := 0;
     OldVibDepth := 0;
+    (* No Cutnote active *)
+    MyCutNote := -1;
     (* Trigger samples normally *)
     RetrigEvery := 0;
     (* Set default speed (request) *)
@@ -1654,7 +1674,7 @@ begin
         MyIncFactor := Trunc(SmpVibUpCnt) - Trunc(OldSmpVibUpCnt);
         Inc(MySmpTCnt, MyIncFactor);
         (* We also update our 'Tick' volume here! *)
-        UpdateMyVolSlide(MyCh);
+        UpdateMyVolSlide(MyCh, MyTickCnt);
       end;
     end;
   end;
@@ -2105,8 +2125,8 @@ begin
     (* Note: In the original format there's just one song speed that is set for the entire song *)
     if OrigFormatFile then
     begin
-      //yeah do something usefull with this..
       RunDecInfo.Items.Add('Song Speed: ' + IntToStr(IgnSetNrOfPats) + ' BPM');
+      OrigFmtTmrSpeed := 5000 / (IgnSetNrOfPats * 2); (* 'IgnSetNrOfPats' BPM = 50Hz = 20mS *)
     end;
     (* Determine the number of patterns in the file *)
     IgnSetNrOfPats := 0;
