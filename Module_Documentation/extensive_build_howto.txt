@@ -2081,7 +2081,7 @@ E.G:
 
 Range: xy = 00h-FFh
 
-This effect is fairly simple, after the row has been processed including it's //row processed means: all 4 channels have been done!! control<<<<
+This effect is fairly simple, after the row has been processed including it's 
 effect, then the order is reset and the song continues playing from row 0.
 Make sure you don't jump over the end of the song length, and if you do then
 set it to the first order.

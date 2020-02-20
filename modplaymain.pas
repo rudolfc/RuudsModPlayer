@@ -119,7 +119,9 @@ Type
     OldVibSpeed,
     OldVibDepth,
     MyCutNote,
-    RetrigEvery     : Integer;
+    RetrigEvery,
+    MyPatLoopPos,
+    MyPatLoopNr     : Integer;
     MyPatTabRunning,
     MyPatBreak,
     MySongEnding,
@@ -356,6 +358,10 @@ begin
           MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
+          (* No Pattern Loop active *)
+          //fixme: isn't explicitly specified, but seems logical?
+          MySongLogic[ChOut].MyPatLoopPos := 0;
+          MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
       end;
       (* Copy 'Pattern break' cmd results to all channels *)
@@ -370,6 +376,10 @@ begin
           MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
+          (* No Pattern Loop active *)
+          //fixme: isn't explicitly specified, but seems logical?
+          MySongLogic[ChOut].MyPatLoopPos := 0;
+          MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
       end;
       (* Copy 'Set Speed' cmd results to global system (effects all channels) *)
@@ -605,6 +615,9 @@ begin
         OldVibDepth := 0;
         (* No Cutnote active *)
         MyCutNote := -1;
+        (* No Pattern Loop active *)
+        MyPatLoopPos := 0;
+        MyPatLoopNr := 0;
         (* Set default speed (request) *)
         if OrigFormatFile then
           MyTmrInterval := OrigFmtTmrSpeed
@@ -692,6 +705,8 @@ var
   S          : String;
 
 procedure DoRetrigParamUpdate;
+var
+  MyParam : Integer;
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
@@ -715,9 +730,18 @@ begin
 
       if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)
       begin
-        //fixme: add tracking flow effect Pattern Loop
-        RunDecInfo.Items.Add('Warning: Pattern Loop not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+        MyParam := PatDecode.EffectParam and $0f;
+        if MyParam = 0 then                  (* Note current row as starting position for the loop *)
+          MyPatLoopPos := MyPatTabPos
+        else
+        begin
+          if MyPatLoopNr = 0 then            (* Note number of loops to make *)
+            MyPatLoopNr := MyParam
+          else
+            Dec(MyPatLoopNr);                (* Update loop counter *)
+          if MyPatLoopNr > 0 then            (* Initiate next loop if we're not done looping yet *)
+            MyPatTabPos := MyPatLoopPos - 1; (* We increment again later so we restart correctly. *)
+        end;
       end;
 
       MyCutNote := -1;
@@ -1259,6 +1283,9 @@ begin
     OldVibDepth := 0;
     (* No Cutnote active *)
     MyCutNote := -1;
+    (* No Pattern Loop active *)
+    MyPatLoopPos := 0;
+    MyPatLoopNr := 0;
     (* Trigger samples normally *)
     RetrigEvery := 0;
     (* Set default speed (request) *)
