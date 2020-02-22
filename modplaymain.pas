@@ -360,7 +360,7 @@ begin
           MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
           MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
           (* No Pattern Loop active *)
-          MySongLogic[ChOut].MyPatLoopPos := 0;
+          MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
       end;
@@ -375,7 +375,7 @@ begin
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
           (* No Pattern Loop active *)
-          MySongLogic[ChOut].MyPatLoopPos := 0;
+          MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
       end;
@@ -392,7 +392,7 @@ begin
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
           (* No Pattern Loop active *)
-          MySongLogic[ChOut].MyPatLoopPos := 0;
+          MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
       end;
@@ -630,7 +630,7 @@ begin
         (* No Cutnote active *)
         MyCutNote := -1;
         (* No Pattern Loop active *)
-        MyPatLoopPos := 0;
+        MyPatLoopPos := -1;
         MyPatLoopNr := 0;
         (* Set default speed (request) *)
         if OrigFormatFile then
@@ -745,16 +745,21 @@ begin
       if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)
       begin
         MyParam := PatDecode.EffectParam and $0f;
-        if MyParam = 0 then                  (* Note current row as starting position for the loop *)
+        if MyParam = 0 then                   (* Note current row as starting position for the loop *)
           MyPatLoopPos := MyPatTabPos
         else
         begin
-          if MyPatLoopNr = 0 then            (* Note number of loops to make *)
-            MyPatLoopNr := MyParam
-          else
-            Dec(MyPatLoopNr);                (* Update loop counter *)
-          if MyPatLoopNr > 0 then            (* Initiate next loop if we're not done looping yet *)
-            MyPatTabPos := MyPatLoopPos - 1; (* We increment again later so we restart correctly. *)
+          if MyPatLoopNr = 0 then             (* Note number of loops to make *)
+            MyPatLoopNr := MyParam;
+          (* Note: Always decrement MyPatLoopNr! (not only if MyPatLoopNr <> 0) *)
+          Dec(MyPatLoopNr);                 (* Update loop counter *)
+          if MyPatLoopNr > 0 then             (* Initiate next loop if we're not done looping yet *)
+          begin
+            if MyPatLoopPos >= 0 then
+              MyPatTabPos := MyPatLoopPos - 1 (* We increment again later so we restart correctly. *)
+            else
+              Dec(MyPatTabPos);               (* We increment again later so we restart correctly (same row). *)
+          end;
         end;
       end;
 
@@ -1298,7 +1303,7 @@ begin
     (* No Cutnote active *)
     MyCutNote := -1;
     (* No Pattern Loop active *)
-    MyPatLoopPos := 0;
+    MyPatLoopPos := -1;
     MyPatLoopNr := 0;
     (* Trigger samples normally *)
     RetrigEvery := 0;
