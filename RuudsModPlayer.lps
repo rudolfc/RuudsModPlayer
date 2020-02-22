@@ -9,7 +9,7 @@
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <CursorPos X="24" Y="15"/>
+        <CursorPos Y="20"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="355"/>
-        <CursorPos X="47" Y="379"/>
+        <TopLine Value="381"/>
+        <CursorPos X="25" Y="325"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -68,9 +68,7 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalFunctions"/>
         <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="87"/>
-        <CursorPos X="30" Y="89"/>
+        <CursorPos X="11" Y="17"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit5>
@@ -84,7 +82,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="73"/>
         <CursorPos X="35" Y="88"/>
-        <UsageCount Value="51"/>
+        <UsageCount Value="57"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
@@ -252,7 +250,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="396"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit28>
       <Unit29>
@@ -260,7 +258,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="907"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit29>
       <Unit30>
@@ -269,7 +267,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1004"/>
         <CursorPos X="6" Y="1014"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit30>
       <Unit31>

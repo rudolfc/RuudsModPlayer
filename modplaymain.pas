@@ -348,6 +348,22 @@ begin
   for ChIn := 1 to MyMediaRec.Channels do
     with MySongLogic[ChIn] do
     begin
+      (* When a channel reaches the end of a pattern table advance all channels to the next one in the song *)
+      (* Note: without this provision:
+               - Pattern Loops (and such) mess things up big time,
+               - but Pinball Dreams and Pinball Fantasies play their songs looping at their inner loop 'levels'. *)
+      if (MyPatTabPos > 63) and (PatDecode.EffectNumber <> 11) and (PatDecode.EffectNumber <> 13) then
+      begin
+        for ChOut := 1 to MyMediaRec.Channels do
+        begin
+          MySongLogic[ChOut].MySongPos       := MySongPos;
+          MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
+          MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
+          (* No Pattern Loop active *)
+          MySongLogic[ChOut].MyPatLoopPos := 0;
+          MySongLogic[ChOut].MyPatLoopNr := 0;
+        end;
+      end;
       (* Copy 'Position Jump' cmd results to all channels *)
       if PatDecode.EffectNumber = 11 then
       begin
@@ -359,7 +375,6 @@ begin
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
           (* No Pattern Loop active *)
-          //fixme: isn't explicitly specified, but seems logical?
           MySongLogic[ChOut].MyPatLoopPos := 0;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
@@ -377,7 +392,6 @@ begin
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
           (* No Pattern Loop active *)
-          //fixme: isn't explicitly specified, but seems logical?
           MySongLogic[ChOut].MyPatLoopPos := 0;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
