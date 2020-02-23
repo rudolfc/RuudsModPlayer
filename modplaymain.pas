@@ -714,17 +714,18 @@ end;
 
 procedure TModMain.ExecNote(MyCh: Integer);
 var
-  d          : Integer;
-  RetrigNote : Boolean;
-  S          : String;
+  d            : Integer;
+  HasNote,
+  RetrigSample : Boolean;
+  S            : String;
 
-procedure DoRetrigParamUpdate;
+procedure DoRetrigParamUpdate(NewInstr, NewNote: Boolean);
 var
   MyParam : Integer;
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
-    MySmpSkipLen := 0;
+    if NewNote then MySmpSkipLen := 0;         //yeah
     if PatDecode.EffectNumber = 9 then (* cmd: effect Set sample offset (= retrigger note) *)
     begin
       (* MySmpSkipLen is given in pages of -Bytes- ! *)
@@ -733,7 +734,7 @@ begin
       if MySmpSkipLen >= MySmpLength then MySmpSkipLen := MySmpLength - 1;
       MyOldSkipLen := MySmpSkipLen;
       (* We should use our old volume on the already playing, now retriggering sample *)
-      MyInBufCnt := MySmpSkipLen; //cmd to engine..
+     // MyInBufCnt := MySmpSkipLen; //cmd to engine..       //yeah
     end;
 
     RetrigEvery := 0;
@@ -787,13 +788,13 @@ begin
   end;
 end;
 
-procedure DoVolParamUpdate(NewNote: Boolean);
+procedure DoVolParamUpdate(NewInstr, NewNote: Boolean);
 var
   MyParam : Integer;
 begin
   with MySongLogic[MyCh] do
   begin
-    (* Slide-effect stop on -every- note, so even non-new ones(!) *)
+    (* Only exec Slide-effect if currently requested *)
     MyVolSlide := 0;
 
     if (PatDecode.EffectNumber = 10) or  (* cmd: effect Volume slide *)
@@ -833,15 +834,15 @@ begin
       end;
     end;
 
-    (* Restore Volume to 'default' on every -new- note only (!) *)
-    if NewNote then MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
+    (* Only restore Volume to 'default' if a sample is specified *)
+    if NewInstr then MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
 
     if PatDecode.EffectNumber = 12 then (* cmd: effect Set Volume (0..64) *)
       MyVolume := PatDecode.EffectParam;
   end;
 end;
 
-procedure DoPortaParamUpdate(NewNote: Boolean);
+procedure DoPortaParamUpdate(NewInstr, NewNote: Boolean);
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
@@ -899,7 +900,7 @@ begin
   end;
 end;
 
-procedure DoVibParamUpdate(NewNote: Boolean);
+procedure DoVibParamUpdate(NewInstr, NewNote: Boolean);
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
@@ -964,7 +965,7 @@ begin
   end;
 end;
 
-function PlayCurrentSample(NewSample: Boolean; Nr9Offset: Word): Boolean;
+function PlayCurrentSample(ResetSample: Boolean; Nr9Offset: Word): Boolean;
 var
   RepeatStart,
   RepeatLength : Integer;
@@ -990,7 +991,7 @@ begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
     (* Restart to SampleOffset (retrigger) and also Restart Effects! *)
-    if NewSample then MyInBufCnt := -1;
+    if ResetSample then MyInBufCnt := -1;
 
     (* playback full sample (minus effect 9 offset if there), including infinite repeats, until it gets overwritten *)
     Result := PlaySample(MyCh,
@@ -1052,19 +1053,19 @@ begin
           PatDecode.EffectNumber := 0;
           PatDecode.EffectParam := 0;
         end;
-        DoRetrigParamUpdate;       (* in effect resets all Retrigger effects only since we blocked cmd exec above. *)
-        DoPortaParamUpdate(False); (* all Porta effects *)
-        DoVibParamUpdate(False);   (* all Vibrato effects *)
-        DoArpeggioUpdate;          (* all Arpeggio effects *)
-        DoTremoloUpdate;           (* all Tremolo effects *)
-        DoVolParamUpdate(False);   (* all Volume effects *)
+        DoRetrigParamUpdate(False, False);(* in effect resets all Retrigger effects only since we blocked cmd exec above. *)
+        DoPortaParamUpdate(False, False); (* all Porta effects *)
+        DoVibParamUpdate(False, False);   (* all Vibrato effects *)
+        DoArpeggioUpdate;                 (* all Arpeggio effects *)
+        DoTremoloUpdate;                  (* all Tremolo effects *)
+        DoVolParamUpdate(False, False);   (* all Volume effects *)
 
         (* we must repeat the previous sample, but we exec the current effect and period! *)
         PatDecode.SampleNumber := MyOldPattern.SampleNumber;
 
         (* We don't retrigger the running note since we are finishing up! *)
-        RetrigNote := False;
-        if not PlayCurrentSample(RetrigNote, MySmpSkipLen) then exit;
+        RetrigSample := False;
+        if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
       end
       else
       begin
@@ -1127,6 +1128,7 @@ begin
         end;
 
         (* Play sample *)
+        HasNote := PatDecode.SamplePeriod > 0;
         (* SampleNr = 0 means keep running/repeating the previous sample.. *)
         if PatDecode.SampleNumber > 0 then
         begin (* we have a valid sample *)
@@ -1139,18 +1141,19 @@ begin
           MySmpLength := MySampleInfo[PatDecode.SampleNumber-1].Length;
           MyOldLength := MySmpLength;
 
-          DoRetrigParamUpdate;      (* all Retrigger effects *)
-          DoPortaParamUpdate(True); (* all Porta effects *)
-          DoVibParamUpdate(True);   (* all Vibrato effects *)
-          DoArpeggioUpdate;         (* all Arpeggio effects *)
-          DoTremoloUpdate;          (* all Tremolo effects *)
-          DoVolParamUpdate(True);   (* all Volume effects *)
+          DoRetrigParamUpdate(True, HasNote);(* all Retrigger effects *)
+          DoPortaParamUpdate(True, HasNote); (* all Porta effects *)
+          DoVibParamUpdate(True, HasNote);   (* all Vibrato effects *)
+          DoArpeggioUpdate;                  (* all Arpeggio effects *)
+          DoTremoloUpdate;                   (* all Tremolo effects *)
+          DoVolParamUpdate(True, HasNote);   (* all Volume effects *)
 
-          RetrigNote := True;
+          RetrigSample := HasNote;
           (* Normally we retrigger each new note, but if PortaTo active we keep playing the old note (sliding)! *)
-          if MyPortaToSpeed <> 0 then RetrigNote := False;
+          //fixme: also don't retrigger on effect $edx..
+          if MyPortaToSpeed <> 0 then RetrigSample := False;
 
-          if not PlayCurrentSample(RetrigNote, MySmpSkipLen) then exit;
+          if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
 
           (* Remember what we did as we might have to repeat (part of) it.. *)
           MyOldPattern := PatDecode;
@@ -1164,22 +1167,22 @@ begin
             MySmpOffset := MyOldOffset;
             MySmpLength := MyOldLength;
 
-            DoRetrigParamUpdate;       (* all Retrigger effects *)
-            DoPortaParamUpdate(False); (* all Porta effects *)
-            DoVibParamUpdate(False);   (* all Vibrato effects *)
-            DoArpeggioUpdate;          (* all Arpeggio effects *)
-            DoTremoloUpdate;           (* all Tremolo effects *)
-            DoVolParamUpdate(False);   (* all Volume effects *)
+            DoRetrigParamUpdate(False, HasNote);(* all Retrigger effects *)
+            DoPortaParamUpdate(False, HasNote); (* all Porta effects *)
+            DoVibParamUpdate(False, HasNote);   (* all Vibrato effects *)
+            DoArpeggioUpdate;                   (* all Arpeggio effects *)
+            DoTremoloUpdate;                    (* all Tremolo effects *)
+            DoVolParamUpdate(False, HasNote);   (* all Volume effects *)
 
             (* we must repeat the previous sample, but we exec the current effect and period! *)
             PatDecode.SampleNumber := MyOldPattern.SampleNumber;
 
-            RetrigNote := False;
-            (* Normally we don't retrigger a running (so old) note, except if no effect is requested! *)
-            if (PatDecode.SamplePeriod <> 0) and (PatDecode.EffectNumber = 0) and (PatDecode.EffectParam = 0) then
-              RetrigNote := True;
+            RetrigSample := HasNote;
+            (* Normally we retrigger each new note, but if PortaTo active we keep playing the old note (sliding)! *)
+            //fixme: also don't retrigger on effect $edx..
+            if MyPortaToSpeed <> 0 then RetrigSample := False;
 
-            if not PlayCurrentSample(RetrigNote, MySmpSkipLen) then exit;
+            if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
           end
           else
           begin
