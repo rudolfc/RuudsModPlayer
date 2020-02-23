@@ -21,10 +21,10 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1172"/>
-        <CursorPos Y="1180"/>
+        <TopLine Value="837"/>
+        <CursorPos X="20" Y="849"/>
         <UsageCount Value="201"/>
+        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
       <Unit2>
@@ -81,7 +81,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="73"/>
         <CursorPos X="35" Y="88"/>
-        <UsageCount Value="64"/>
+        <UsageCount Value="65"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
@@ -414,10 +414,64 @@
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit48>
     </Units>
-    <General>
-      <ActiveWindowIndexAtStart Value="-1"/>
-    </General>
-    <JumpHistory HistoryIndex="-1"/>
+    <JumpHistory Count="14" HistoryIndex="13">
+      <Position1>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="849" Column="27" TopLine="901"/>
+      </Position1>
+      <Position2>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="728" Column="50" TopLine="711"/>
+      </Position2>
+      <Position3>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="737" Column="82" TopLine="711"/>
+      </Position3>
+      <Position4>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="849" Column="40" TopLine="833"/>
+      </Position4>
+      <Position5>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="728" Column="50" TopLine="710"/>
+      </Position5>
+      <Position6>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="737" Column="63" TopLine="710"/>
+      </Position6>
+      <Position7>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="845" Column="11" TopLine="839"/>
+      </Position7>
+      <Position8>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="1143" Column="11" TopLine="1125"/>
+      </Position8>
+      <Position9>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="1171" Column="13" TopLine="1154"/>
+      </Position9>
+      <Position10>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="848" Column="12" TopLine="832"/>
+      </Position10>
+      <Position11>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="728" Column="50" TopLine="710"/>
+      </Position11>
+      <Position12>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="737" Column="63" TopLine="710"/>
+      </Position12>
+      <Position13>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="849" Column="20" TopLine="839"/>
+      </Position13>
+      <Position14>
+        <Filename Value="modplaymain.pas"/>
+        <Caret Line="1145" Column="11" TopLine="1113"/>
+      </Position14>
+    </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes Count="0" ActiveMode=""/>

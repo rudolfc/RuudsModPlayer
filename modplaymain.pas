@@ -725,7 +725,7 @@ var
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
-    if NewNote then MySmpSkipLen := 0;         //yeah
+    if NewNote then MySmpSkipLen := 0;         //yeah doublecheck
     if PatDecode.EffectNumber = 9 then (* cmd: effect Set sample offset (= retrigger note) *)
     begin
       (* MySmpSkipLen is given in pages of -Bytes- ! *)
@@ -734,7 +734,7 @@ begin
       if MySmpSkipLen >= MySmpLength then MySmpSkipLen := MySmpLength - 1;
       MyOldSkipLen := MySmpSkipLen;
       (* We should use our old volume on the already playing, now retriggering sample *)
-     // MyInBufCnt := MySmpSkipLen; //cmd to engine..       //yeah
+     // MyInBufCnt := MySmpSkipLen; //cmd to engine..       //yeah doublecheck
     end;
 
     RetrigEvery := 0;
@@ -848,7 +848,7 @@ begin
   begin
     if NewNote then
     begin
-      (* Reset/stop Porta up/down on -every new note- (!) *)
+      (* Reset/stop Porta up/down on every new note (!) *)
       MyPortaSpeed := 0;  (* effect stop *)
       MyPrtaPerPart := 0; (* engine reset *)
       (* We must keep PortaTo going if it was running before even if we have a new note! *)
@@ -904,7 +904,7 @@ procedure DoVibParamUpdate(NewInstr, NewNote: Boolean);
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
-    if NewNote then
+    if NewInstr then
     begin
       (* Reset/stop Vibrato on -every new note- (!) *)
       MyVibSpeed := 0;    (* effect stop *)
