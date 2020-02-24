@@ -119,10 +119,12 @@ Type
     OldVibSpeed,
     OldVibDepth,
     MyCutNote,
+    MyPatDelayNr,
     RetrigEvery,
     MyPatLoopPos,
     MyPatLoopNr     : Integer;
     MyPatTabRunning,
+    MyPatDelaying,
     MyPatBreak,
     MySongEnding,
     MySongDone      : Boolean;
@@ -266,7 +268,6 @@ begin
 end;
 
 
-(* V6.3.0/V3.3.0 added TFPTimer/Tevent combination *)
 procedure TModMain.ExecTick(Sender: TObject);
 var
   Ch       : Integer;
@@ -350,6 +351,7 @@ begin
     begin
       (* When a channel reaches the end of a pattern table advance all channels to the next one in the song *)
       (* Note: without this provision Pattern Loops (and such) might mess things up big time.. *)
+      //yeah: doublecheck if we indeed need this..
       if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
@@ -394,6 +396,15 @@ begin
           (* No Pattern Loop active *)
           MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
+        end;
+      end;
+      (* Copy 'Pattern Delay' cmd results to all channels (they need to process it as well) *)
+      if (PatDecode.EffectNumber = 14) and ((PatDecode.EffectParam shr 4) = $e) then
+      begin
+        for ChOut := 1 to MyMediaRec.Channels do
+        begin
+          MySongLogic[ChOut].MyPatDelayNr  := MyPatDelayNr;
+          MySongLogic[ChOut].MyPatDelaying := MyPatDelaying;
         end;
       end;
       (* Copy 'Set Speed' cmd results to global system (effects all channels) *)
@@ -629,6 +640,9 @@ begin
         OldVibDepth := 0;
         (* No Cutnote active *)
         MyCutNote := -1;
+        (* No Pattern Delay active *)
+        MyPatDelayNr := 0;
+        MyPatDelaying := False;
         (* No Pattern Loop active *)
         MyPatLoopPos := -1;
         MyPatLoopNr := 0;
@@ -749,16 +763,16 @@ begin
           MyPatLoopPos := MyPatTabPos
         else
         begin
-          if MyPatLoopNr = 0 then             (* Note number of loops to make *)
+          if MyPatLoopNr = 0 then      (* Note number of loops to make *)
             MyPatLoopNr := MyParam;
           (* Note: Always decrement MyPatLoopNr! (not only if MyPatLoopNr <> 0) *)
-          Dec(MyPatLoopNr);                 (* Update loop counter *)
-          if MyPatLoopNr > 0 then             (* Initiate next loop if we're not done looping yet *)
+          Dec(MyPatLoopNr);            (* Update loop counter *)
+          if MyPatLoopNr > 0 then      (* Initiate next loop if we're not done looping yet *)
           begin
             if MyPatLoopPos >= 0 then
-              MyPatTabPos := MyPatLoopPos - 1 (* We increment again later so we restart correctly. *)
+              Dec(MyPatTabPos)         (* We increment again later so we restart correctly. *)
             else
-              Dec(MyPatTabPos);               (* We increment again later so we restart correctly (same row). *)
+              Dec(MyPatTabPos);        (* We increment again later so we restart correctly (same row). *)
           end;
         end;
       end;
@@ -779,9 +793,9 @@ begin
 
       if (PatDecode.EffectParam shr 4) = $e then (* cmd: effect Pattern Delay *)
       begin
-        //fixme: add tracking flow effect Pattern Delay
-        RunDecInfo.Items.Add('Warning: Pattern Delay not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+        (* Only 'Start' this effect if not already running *)
+        if not MyPatDelaying then
+          MyPatDelayNr := PatDecode.EffectParam and $0f;
       end;
     end;
   end;
@@ -1128,8 +1142,8 @@ begin
 
         (* Play sample *)
         HasNote := PatDecode.SamplePeriod > 0;
-        (* SampleNr = 0 means keep running/repeating the previous sample.. *)
-        if PatDecode.SampleNumber > 0 then
+        (* If a sample (instrument) is specified and we are not executing effect Pattern Delay: Play it *)
+        if (PatDecode.SampleNumber > 0) and not MyPatDelaying then
         begin (* we have a valid sample *)
           (* determine the location and length of our current new sample to play *)
           MySmpOffset := 0;
@@ -1159,12 +1173,21 @@ begin
         end
         else
         begin
-          (* if our song starts with 'play history' then skip this step! (nothing to do) *)
+          (* If we played a sample (instrument) before: Continue) playing it *)
           if (MyOldPattern.SampleNumber > 0) then
           begin
             (* fetch location and length of our previous sample again *)
             MySmpOffset := MyOldOffset;
             MySmpLength := MyOldLength;
+
+            if MyPatDelaying then
+            begin
+              (* If we are executing effect Pattern Delay we must keep running the 'old' effects.. *)
+              PatDecode := MyOldPattern;
+              (* .. and we must indeed delay running the patterntable. *)
+              (* Note: We increment again later so we restart correctly *)
+              Dec(MyPatTabPos);
+            end;
 
             DoRetrigParamUpdate(False, HasNote);(* all Retrigger effects *)
             DoPortaParamUpdate(False, HasNote); (* all Porta effects *)
@@ -1185,10 +1208,19 @@ begin
           end
           else
           begin
-           (* Play silence buffer *)
+            (* Play silence buffer (nothing to do) *)
             if not PlayEmptySample(MyCh) then exit;
           end;
         end;
+
+        (* Process Pattern Delay effect if active *)
+        if MyPatDelayNr > 0 then
+        begin
+          MyPatDelaying := True;
+          Dec(MyPatDelayNr);
+        end
+        else
+          MyPatDelaying := False;
 
         (* set target is next entry in this pattern table *)
         Inc(MyPatTabPos);
@@ -1304,6 +1336,9 @@ begin
     OldVibDepth := 0;
     (* No Cutnote active *)
     MyCutNote := -1;
+    (* No Pattern Delay active *)
+    MyPatDelayNr := 0;
+    MyPatDelaying := False;
     (* No Pattern Loop active *)
     MyPatLoopPos := -1;
     MyPatLoopNr := 0;
