@@ -349,16 +349,16 @@ begin
     with MySongLogic[ChIn] do
     begin
       (* When a channel reaches the end of a pattern table advance all channels to the next one in the song *)
-      (* Note: without this provision:
-               - Pattern Loops (and such) mess things up big time,
-               - but Pinball Dreams and Pinball Fantasies play their songs looping at their inner loop 'levels'. *)
-      if (MyPatTabPos > 63) and (PatDecode.EffectNumber <> 11) and (PatDecode.EffectNumber <> 13) then
+      (* Note: without this provision Pattern Loops (and such) might mess things up big time.. *)
+      if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
         begin
+          MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
           MySongLogic[ChOut].MySongPos       := MySongPos;
           MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
-          MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
+          MySongLogic[ChOut].MySongEnding    := MySongEnding;
+          MySongLogic[ChOut].MySongDone      := MySongDone;
           (* No Pattern Loop active *)
           MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
@@ -725,7 +725,7 @@ var
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
-    if NewNote then MySmpSkipLen := 0;         //yeah doublecheck
+    MySmpSkipLen := 0;
     if PatDecode.EffectNumber = 9 then (* cmd: effect Set sample offset (= retrigger note) *)
     begin
       (* MySmpSkipLen is given in pages of -Bytes- ! *)
@@ -734,7 +734,6 @@ begin
       if MySmpSkipLen >= MySmpLength then MySmpSkipLen := MySmpLength - 1;
       MyOldSkipLen := MySmpSkipLen;
       (* We should use our old volume on the already playing, now retriggering sample *)
-     // MyInBufCnt := MySmpSkipLen; //cmd to engine..       //yeah doublecheck
     end;
 
     RetrigEvery := 0;
@@ -979,8 +978,8 @@ begin
     RepeatStart  := MySampleInfo[PatDecode.SampleNumber-1].RptStart;
     MyFineTune   := MySampleInfo[PatDecode.SampleNumber-1].FineTune;
   end;
-  //yeah in orig files only the loop-area is played in looping samples.
-  //so make Nr9Offset := RepeatStart there! (always)
+  (* In original format files only the loop-area is played in looping samples.. *)
+  if OrigFormatFile and (RepeatLength > 2) then Nr9Offset := RepeatStart;
 
   if MyAppClosing or StoppingMySong or MySongPaused then
   begin
@@ -1151,7 +1150,7 @@ begin
           RetrigSample := HasNote;
           (* Normally we retrigger each new note, but if PortaTo active we keep playing the old note (sliding)! *)
           //fixme: also don't retrigger on effect $edx..
-          if MyPortaToSpeed <> 0 then RetrigSample := False;
+          if MyPortaToSpeed <> 0 then RetrigSample := False; //yeah unless prev <> 3 and 5 (Porta to Note)??
 
           if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
 
