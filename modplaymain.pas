@@ -410,8 +410,11 @@ begin
       (* Copy 'Set Speed' cmd results to global system (effects all channels) *)
       if PatDecode.EffectNumber = 15 then
       begin
-        ActTmrInterval := MyTmrInterval;
-        ActTckspeed := MyTickSpeed;
+        (* Often both variants occur in the same row *)
+        if PatDecode.EffectParam >= 32 then
+          ActTmrInterval := MyTmrInterval
+        else
+          ActTckspeed := MyTickSpeed;
       end;
       (* Check for/signal song end: Wait for all channels to finish their songs *)
       if MySongDone then Inc(ChSongDone);
@@ -1253,11 +1256,7 @@ begin
           //       xy = 20h-FFh for BPM
           //the rate in Hz is equal to Hz = bpm * 2 / 5
           if PatDecode.EffectParam >= 32 then
-          begin
-            MyTmrInterval := 5000 / (PatDecode.EffectParam * 2); //125BPM = 50Hz = 20mS
-            (* We have to reset MySpeed here as well! *)
-            MyTickSpeed := DefaultTckSpeed;
-          end
+            MyTmrInterval := 5000 / (PatDecode.EffectParam * 2) //125BPM = 50Hz = 20mS
           else
             MyTickSpeed := PatDecode.EffectParam;
         end;
