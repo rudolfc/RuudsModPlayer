@@ -341,7 +341,7 @@ begin
   if Cmd11 and Cmd13 then
   begin
     //fixme: complete 11 and 13 on same row!
-    RunDecInfo.Items.Add('Warning: ''Pos Jump'' with ''Pat break'' combined not yet implemented!');
+    RunDecInfo.Items.Add('--> ''Pos Jump''&''Pat break'' not yet done, please contact Rudolf with this song''s author and title..');
     RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
   end;
 
@@ -351,8 +351,8 @@ begin
     begin
       (* When a channel reaches the end of a pattern table advance all channels to the next one in the song *)
       (* Note: without this provision Pattern Loops (and such) might mess things up big time.. *)
-      //yeah: doublecheck if we indeed need this..
-      if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
+      //fixme: I expect the below disabled code can be removed.
+     {if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
         begin
@@ -365,7 +365,7 @@ begin
           MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
-      end;
+      end;}
       (* Copy 'Position Jump' cmd results to all channels *)
       if PatDecode.EffectNumber = 11 then
       begin
@@ -469,13 +469,6 @@ begin
   IO_Timer.Interval := 5; (* The shortest interval needed is 9.8mS (255 BPM) so this is fast enough and it may even vary.. *)
   IO_Timer.Enabled := False;
   IO_Timer.OnTimer := ExecTick;
-
-  (* Make sure we have optimal Windows timing at our disposal! (we are MultiMedia ;-)
-     see: http://www.geisswerks.com/ryan/FAQS/timing.html *)
-  (* No longer needed as the output buffer size determines the playing speed now (instead of our timer) *)
-  //timeBeginPeriod(1); (* Note: Is automatically reset upon program exit.. *)
-
-{ for a := 0 to 10000 do PMybuffer^[a]:= 128 + Round(70*sin(3.1415 * (a / 90)));}
 
   CBSample.AddItem('All',nil);
   for a := 1 to 31 do
@@ -761,8 +754,18 @@ begin
 
       if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)
       begin
+        (* Note: I have the feeling this item is used sometimes while writing a song:
+                 MyParam = 0: Start position to jump back to;
+                 MyParam = 1: We run the sequence once, so we -don't- loop back;
+                 MyParam > 1: We loop (MyParam-1) times, so we play it (MyParam) times.
+                 I was unable to locate MyParams above 1 upto now unfortunately. *)
         MyParam := PatDecode.EffectParam and $0f;
-        if MyParam = 0 then                   (* Note current row as starting position for the loop *)
+        if MyParam > 1 then //fixme: debug message, hoping for feedback on this..
+        begin
+          RunDecInfo.Items.Add('--> Pattern loop > 1x, please contact Rudolf with this song''s author and title..');
+          RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+        end;
+        if MyParam = 0 then            (* Note current row as starting position for the loop *)
           MyPatLoopPos := MyPatTabPos
         else
         begin
@@ -1227,7 +1230,14 @@ begin
 
         (* set target is next entry in this pattern table *)
         Inc(MyPatTabPos);
-        if MyPatTabPos > 63 then MyPatTabRunning := False; //exit inner loop
+        if MyPatTabPos > 63 then
+        begin
+          (* Exiting current table *)
+          MyPatTabRunning := False;
+          (* No Pattern Loop active (always reset when going to the next table) *)
+          MyPatLoopPos := -1;
+          MyPatLoopNr := 0;
+        end;
 
         (* check for pattern jumps to see if we should deviate.. *)
         if PatDecode.EffectNumber = 13 then
@@ -1236,10 +1246,12 @@ begin
           MyPatTabPos := (PatDecode.EffectParam shr 4) * 10 + (PatDecode.EffectParam and $0f);
           if MyPatTabPos > 63 then MyPatTabPos := 0;
           MyPatbreak := True;
-          MyPatTabRunning := False; //exit inner loop
+          (* Exiting current table *)
+          MyPatTabRunning := False;
         end;
         if PatDecode.EffectNumber = 11 then
         begin
+          (* Do no fail-safe check on MySongPos here as it's catched below! (overflow might be used to signal song end..) *)
           if PatDecode.EffectParam = MySongPos then
           begin
             (* Not explicitly documented, but seems very correct! *)
@@ -1247,16 +1259,16 @@ begin
           end
           else
             MySongPos := PatDecode.EffectParam;
-          (* Do no fail-safe check on MySongPos here as it's catched below! (overflow might be used to signal song end..) *)
-          MyPatTabRunning := False; //exit inner loop
+
+          (* Exiting current table *)
+          MyPatTabRunning := False;
         end;
         if PatDecode.EffectNumber = 15 then //set speed
         begin
-          //Range: xy = 00h-1Fh for speed
-          //       xy = 20h-FFh for BPM
-          //the rate in Hz is equal to Hz = bpm * 2 / 5
+          (* Range: xy = 00h-1Fh for speed; xy = 20h-FFh for BPM *)
+          (* Note: The rate in Hz is equal to Hz = bpm * 2 / 5 (125BPM = 50Hz = 20mS) *)
           if PatDecode.EffectParam >= 32 then
-            MyTmrInterval := 5000 / (PatDecode.EffectParam * 2) //125BPM = 50Hz = 20mS
+            MyTmrInterval := 5000 / (PatDecode.EffectParam * 2)
           else
             MyTickSpeed := PatDecode.EffectParam;
         end;

@@ -9,6 +9,7 @@
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
         <CursorPos Y="20"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -22,8 +23,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="1236"/>
-        <CursorPos X="72" Y="1254"/>
+        <TopLine Value="1017"/>
+        <CursorPos X="3" Y="1026"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -58,7 +59,7 @@
         <UnitName Value="GlobalVars"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="30"/>
-        <CursorPos X="30" Y="48"/>
+        <CursorPos X="18" Y="49"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
@@ -81,7 +82,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="73"/>
         <CursorPos X="35" Y="88"/>
-        <UsageCount Value="78"/>
+        <UsageCount Value="84"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
@@ -98,7 +99,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="171"/>
         <CursorPos Y="185"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit8>
       <Unit9>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\include\customform.inc"/>
@@ -127,7 +128,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1466"/>
         <CursorPos X="15" Y="1481"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit12>
       <Unit13>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32object.inc"/>
