@@ -776,9 +776,9 @@ begin
           if MyPatLoopNr > 0 then      (* Initiate next loop if we're not done looping yet *)
           begin
             if MyPatLoopPos >= 0 then
-              Dec(MyPatTabPos)         (* We increment again later so we restart correctly. *)
+              MyPatTabPos := MyPatLoopPos - 1 (* We increment again later so we restart correctly. *)
             else
-              Dec(MyPatTabPos);        (* We increment again later so we restart correctly (same row). *)
+              Dec(MyPatTabPos);               (* We increment again later so we restart correctly (same row). *)
           end;
         end;
       end;
