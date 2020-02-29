@@ -23,8 +23,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="765"/>
-        <CursorPos X="53" Y="779"/>
+        <TopLine Value="1190"/>
+        <CursorPos X="8" Y="1216"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -59,7 +59,7 @@
         <UnitName Value="GlobalVars"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="30"/>
-        <CursorPos X="18" Y="49"/>
+        <CursorPos X="3" Y="46"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
@@ -82,7 +82,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="73"/>
         <CursorPos X="35" Y="88"/>
-        <UsageCount Value="84"/>
+        <UsageCount Value="86"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>

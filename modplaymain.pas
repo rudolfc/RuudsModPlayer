@@ -119,6 +119,7 @@ Type
     OldVibSpeed,
     OldVibDepth,
     MyCutNote,
+    MyDelayNote,
     MyPatDelayNr,
     RetrigEvery,
     MyPatLoopPos,
@@ -636,6 +637,8 @@ begin
         OldVibDepth := 0;
         (* No Cutnote active *)
         MyCutNote := -1;
+        (* No Delaynote active *)
+        MyDelayNote := -1;
         (* No Pattern Delay active *)
         MyPatDelayNr := 0;
         MyPatDelaying := False;
@@ -747,6 +750,8 @@ begin
     end;
 
     RetrigEvery := 0;
+    MyCutNote := -1;
+    MyDelayNote := -1;
     if PatDecode.EffectNumber = 14 then         (* cmd: Extended commands *)
     begin
       if (PatDecode.EffectParam shr 4) = 9 then (* cmd: effect Retrigger note every x ticks *)
@@ -783,7 +788,6 @@ begin
         end;
       end;
 
-      MyCutNote := -1;
       if (PatDecode.EffectParam shr 4) = $c then (* cmd: effect Cut Note *)
       begin
         (* Please note: if MyCutNote is zero then it's ignored (seems correct, specified). *)
@@ -792,6 +796,10 @@ begin
 
       if (PatDecode.EffectParam shr 4) = $d then (* cmd: effect Delay Note *)
       begin
+        MyDelayNote := PatDecode.EffectParam and $0f;
+        (* We must ignore this effect on Tick0, so if 0 is specified *)
+        if MyDelayNote = 0 then MyDelayNote := -1;
+
         //fixme: add Delay Note (i.e. Subi King of Boggle: end of song, Beasty boys sample 'King of Boggle': smp 24)
         RunDecInfo.Items.Add('Warning: Delay Note not yet implemented!');
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
@@ -1168,9 +1176,8 @@ begin
           DoVolParamUpdate(True, HasNote);   (* all Volume effects *)
 
           RetrigSample := HasNote;
-          (* Normally we retrigger each new note, but if PortaTo active we keep playing the old note (sliding)! *)
-          //fixme: also don't retrigger on effect $edx..
-          if MyPortaToSpeed <> 0 then RetrigSample := False; //yeah unless prev <> 3 and 5 (Porta to Note)??
+          (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
+          if (MyPortaToSpeed <> 0) or (MyDelayNote >= 0) then RetrigSample := False;
 
           if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
 
@@ -1206,9 +1213,8 @@ begin
             PatDecode.SampleNumber := MyOldPattern.SampleNumber;
 
             RetrigSample := HasNote;
-            (* Normally we retrigger each new note, but if PortaTo active we keep playing the old note (sliding)! *)
-            //fixme: also don't retrigger on effect $edx..
-            if MyPortaToSpeed <> 0 then RetrigSample := False;
+            (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
+            if (MyPortaToSpeed <> 0) or (MyDelayNote >= 0) then RetrigSample := False;
 
             if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
           end
@@ -1347,6 +1353,8 @@ begin
     OldVibDepth := 0;
     (* No Cutnote active *)
     MyCutNote := -1;
+    (* No Delaynote active *)
+    MyDelayNote := -1;
     (* No Pattern Delay active *)
     MyPatDelayNr := 0;
     MyPatDelaying := False;
@@ -1713,7 +1721,6 @@ begin
       Inc(MyTickCnt);
       if MyTickCnt < ActTckSpeed then
       begin
-        //fixme: add explicit 're'trigger check + exec at tick0 if this cmd can be issued without an instrument specified?!
         if (RetrigEvery > 0) and ((MyTickCnt mod RetrigEvery) = 0) then
         begin
           (* Reset input to first sample (We might skip first part of sample buffer though) *)
