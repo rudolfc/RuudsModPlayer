@@ -352,9 +352,8 @@ begin
     with MySongLogic[ChIn] do
     begin
       (* When a channel reaches the end of a pattern table advance all channels to the next one in the song *)
-      (* Note: without this provision Pattern Loops (and such) might mess things up big time.. *)
-      //fixme: I expect the below disabled code can be removed.
-     {if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
+      (* Note: without this provision Pattern Loops will mess things up big time.. *)
+      if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
         begin
@@ -367,7 +366,7 @@ begin
           MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
         end;
-      end;}
+      end;
       (* Copy 'Position Jump' cmd results to all channels *)
       if PatDecode.EffectNumber = 11 then
       begin
@@ -788,14 +787,8 @@ begin
         (* Note: I have the feeling this item is used sometimes while writing a song:
                  MyParam = 0: Start position to jump back to;
                  MyParam = 1: We run the sequence once, so we -don't- loop back;
-                 MyParam > 1: We loop (MyParam-1) times, so we play it (MyParam) times.
-                 I was unable to locate MyParams above 1 upto now unfortunately. *)
+                 MyParam > 1: We loop (MyParam-1) times, so we play it (MyParam) times. *)
         MyParam := PatDecode.EffectParam and $0f;
-        if MyParam > 1 then //fixme: debug message, hoping for feedback on this..
-        begin
-          RunDecInfo.Items.Add('--> Pattern loop > 1x, please contact Rudolf with this song''s author and title..');
-          RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-        end;
         if MyParam = 0 then            (* Note current row as starting position for the loop *)
           MyPatLoopPos := MyPatTabPos
         else
