@@ -156,7 +156,7 @@ begin
           end;
         end;
         Add('Samples:');
-        For a := 0 to 30 do
+        For a := 0 to MyMediaRec.MaxSamples-1 do
         begin
           (* Note: If sample '0' should be played actually the previous sample should be repeated! *)
           Add(IntToStr(a+1) + ' -' + MySampleInfo[a].Title +

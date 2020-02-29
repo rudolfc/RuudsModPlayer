@@ -732,7 +732,7 @@ var
   RetrigSample : Boolean;
   S            : String;
 
-procedure DoRetrigParamUpdate(NewInstr, NewNote: Boolean);
+procedure DoRetrigParamUpdate;
 var
   MyParam : Integer;
 begin
@@ -1080,7 +1080,7 @@ begin
           PatDecode.EffectNumber := 0;
           PatDecode.EffectParam := 0;
         end;
-        DoRetrigParamUpdate(False, False);(* in effect resets all Retrigger effects only since we blocked cmd exec above. *)
+        DoRetrigParamUpdate;              (* in effect resets all Retrigger effects only since we blocked cmd exec above. *)
         DoPortaParamUpdate(False, False); (* all Porta effects *)
         DoVibParamUpdate(False, False);   (* all Vibrato effects *)
         DoArpeggioUpdate;                 (* all Arpeggio effects *)
@@ -1168,17 +1168,22 @@ begin
           MySmpLength := MySampleInfo[PatDecode.SampleNumber-1].Length;
           MyOldLength := MySmpLength;
 
-          DoRetrigParamUpdate(True, HasNote);(* all Retrigger effects *)
-          DoPortaParamUpdate(True, HasNote); (* all Porta effects *)
-          DoVibParamUpdate(True, HasNote);   (* all Vibrato effects *)
-          DoArpeggioUpdate;                  (* all Arpeggio effects *)
-          DoTremoloUpdate;                   (* all Tremolo effects *)
-          DoVolParamUpdate(True, HasNote);   (* all Volume effects *)
+          DoRetrigParamUpdate;                               (* all Retrigger effects *)
+          (* DoRetrigParamUpdate 'DelayNote' influences the remaining effects *)
+          if MyDelayNote < 0 then
+            RetrigSample := HasNote
+          else
+            RetrigSample := False;
+          DoPortaParamUpdate(MyDelayNote < 0, RetrigSample); (* all Porta effects *)
+          (* DoPortaParamUpdate 'PortaTo' blocks note retrigger *)
+          if MyPortaToSpeed <> 0 then
+            RetrigSample := False;
+          DoVibParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Vibrato effects *)
+          DoArpeggioUpdate;                                  (* all Arpeggio effects *)
+          DoTremoloUpdate;                                   (* all Tremolo effects *)
+          DoVolParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Volume effects *)
 
-          RetrigSample := HasNote;
           (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
-          if (MyPortaToSpeed <> 0) or (MyDelayNote >= 0) then RetrigSample := False;
-
           if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
 
           (* Remember what we did as we might have to repeat (part of) it.. *)
@@ -1202,20 +1207,25 @@ begin
               Dec(MyPatTabPos);
             end;
 
-            DoRetrigParamUpdate(False, HasNote);(* all Retrigger effects *)
-            DoPortaParamUpdate(False, HasNote); (* all Porta effects *)
-            DoVibParamUpdate(False, HasNote);   (* all Vibrato effects *)
-            DoArpeggioUpdate;                   (* all Arpeggio effects *)
-            DoTremoloUpdate;                    (* all Tremolo effects *)
-            DoVolParamUpdate(False, HasNote);   (* all Volume effects *)
+            DoRetrigParamUpdate;                     (* all Retrigger effects *)
+            (* DoRetrigParamUpdate 'DelayNote' influences the remaining effects *)
+            if MyDelayNote < 0 then
+              RetrigSample := HasNote
+            else
+              RetrigSample := False;
+            DoPortaParamUpdate(False, RetrigSample); (* all Porta effects *)
+            (* DoPortaParamUpdate 'PortaTo' blocks note retrigger *)
+            if MyPortaToSpeed <> 0 then
+              RetrigSample := False;
+            DoVibParamUpdate(False, RetrigSample);   (* all Vibrato effects *)
+            DoArpeggioUpdate;                        (* all Arpeggio effects *)
+            DoTremoloUpdate;                         (* all Tremolo effects *)
+            DoVolParamUpdate(False, RetrigSample);   (* all Volume effects *)
 
             (* we must repeat the previous sample, but we exec the current effect and period! *)
             PatDecode.SampleNumber := MyOldPattern.SampleNumber;
 
-            RetrigSample := HasNote;
             (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
-            if (MyPortaToSpeed <> 0) or (MyDelayNote >= 0) then RetrigSample := False;
-
             if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
           end
           else
