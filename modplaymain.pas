@@ -130,7 +130,8 @@ Type
     MySongEnding,
     MySongDone      : Boolean;
     PatDecode,
-    MyOldPattern    : TModPattern;
+    MyOldPattern,
+    MyDelayPattern  : TModPattern;
   end;
 
   TSampleLogic = record
@@ -639,6 +640,7 @@ begin
         MyCutNote := -1;
         (* No Delaynote active *)
         MyDelayNote := -1;
+        ResetMyPattern(MyDelayPattern);
         (* No Pattern Delay active *)
         MyPatDelayNr := 0;
         MyPatDelaying := False;
@@ -732,12 +734,37 @@ var
   RetrigSample : Boolean;
   S            : String;
 
+
 procedure DoRetrigParamUpdate;
 var
   MyParam : Integer;
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
+    (* We _must_ process effect Delay Note first since it might change PatDecode! *)
+    MyDelayNote := -1;
+    if PatDecode.EffectNumber = 14 then (* cmd: Extended commands *)
+    begin
+      if (PatDecode.EffectParam shr 4) = $d then (* cmd: effect Delay Note *)
+      begin
+        MyDelayNote := PatDecode.EffectParam and $0f;
+        (* We must ignore this effect on Tick0, so if 0 is specified *)
+        if MyDelayNote = 0 then MyDelayNote := -1;
+        if MyDelayNote >= 0 then
+        begin
+          (* We might actually execute the delayed note: so save it.. *)
+          MyDelayPattern := PatDecode;
+          (* .. and for now keep running the previous effects *)
+          PatDecode := MyOldPattern;
+        end;
+
+        //fixme: add Delay Note (i.e. Subi King of Boggle: end of song, Beasty boys sample 'King of Boggle': smp 24)
+        RunDecInfo.Items.Add('Warning: Delay Note not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
+    end;
+
+    (* Delay Note is done, so _now_ we can process the other effects on the possibly updated PatDecode *)
     MySmpSkipLen := 0;
     if PatDecode.EffectNumber = 9 then (* cmd: effect Set sample offset (= retrigger note) *)
     begin
@@ -751,7 +778,6 @@ begin
 
     RetrigEvery := 0;
     MyCutNote := -1;
-    MyDelayNote := -1;
     if PatDecode.EffectNumber = 14 then         (* cmd: Extended commands *)
     begin
       if (PatDecode.EffectParam shr 4) = 9 then (* cmd: effect Retrigger note every x ticks *)
@@ -792,17 +818,6 @@ begin
       begin
         (* Please note: if MyCutNote is zero then it's ignored (seems correct, specified). *)
         MyCutNote := PatDecode.EffectParam and $0f;
-      end;
-
-      if (PatDecode.EffectParam shr 4) = $d then (* cmd: effect Delay Note *)
-      begin
-        MyDelayNote := PatDecode.EffectParam and $0f;
-        (* We must ignore this effect on Tick0, so if 0 is specified *)
-        if MyDelayNote = 0 then MyDelayNote := -1;
-
-        //fixme: add Delay Note (i.e. Subi King of Boggle: end of song, Beasty boys sample 'King of Boggle': smp 24)
-        RunDecInfo.Items.Add('Warning: Delay Note not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
 
       if (PatDecode.EffectParam shr 4) = $e then (* cmd: effect Pattern Delay *)
