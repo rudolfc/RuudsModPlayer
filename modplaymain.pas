@@ -756,10 +756,6 @@ begin
           (* .. and for now keep running the previous effects *)
           PatDecode := MyOldPattern;
         end;
-
-        //fixme: add Delay Note (i.e. Subi King of Boggle: end of song, Beasty boys sample 'King of Boggle': smp 24)
-        RunDecInfo.Items.Add('Warning: Delay Note not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
     end;
 
@@ -1720,6 +1716,131 @@ var
   S            : String;
 
 
+function AmigaSpeedChk(MyAmigaSpeed: Word): Integer;
+var
+  Cnt : Integer;
+begin
+  (* find AmigaSpeed in our default (non-finepitched) notes lookup table *)
+  Result := -1;
+
+  for Cnt := 1 to 36 do
+    if (MyAmigaSpeed > (MyPeriodTable[0, Cnt]-2)) and (MyAmigaSpeed < (MyPeriodTable[0, Cnt]+2)) then Result := Cnt;
+  if Result < 0 then
+  begin
+    (* Amigaspeed not found in table means no sound. *)
+    exit;
+  end;
+
+  (* now apply sample's finetune setting and fetch finetuned AmigaSpeed. *)
+  if CBPatDebug.Checked and not MyAppClosing then
+  begin
+    S := '';
+    if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
+    RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(Result) +
+      ', Finetune: ' + IntToStr(FineTune) + ', Outspeed: ' + inttostr(MyPeriodTable[FineTune, Result]));
+    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+  end;
+  Result := MyPeriodTable[FineTune, Result];
+end;
+
+
+procedure StartCurrentSample(MyNewInPeriod : Integer);
+var
+  RepeatStart,
+  RepeatLength : Integer;
+  MyFineTune   : ShortInt;
+begin
+  with MySongLogic[MyCh] do
+  begin
+    RepeatLength := MySampleInfo[PatDecode.SampleNumber-1].RptLength;
+    RepeatStart  := MySampleInfo[PatDecode.SampleNumber-1].RptStart;
+    MyFineTune   := MySampleInfo[PatDecode.SampleNumber-1].FineTune;
+
+    (* Setup for playback full sample, including infinite repeats, until it gets overwritten *)
+    MySmpPtr := MySamplesPtr+MySmpOffset;
+    MyBufLen := MySmpLength;
+    MyFirstStart := 0;
+    MyRptLen := RepeatLength;
+    MyRptStart := RepeatStart;
+    AmigaSpeed := PatDecode.SamplePeriod;
+    FineTune := MyFineTune;
+  end;
+  with MySampleLogic[MyCh] do
+  begin
+    (* We already determined our official finepitched correct AmigaSpeed, apply it now *)
+    MyInPeriod := MyNewInPeriod;
+    (* calculate initial (coarse) up-sample rate *)
+    Up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPeriod) / MPSettings.MySettings.MyTVSpeed;
+    (* New sample starting: point to first buffer position *)
+    (* Please note: 'value-1' below is used because of inter-new-sample-data-connection requirement! *)
+    MyInBufCnt := - 1;
+    (* Setup neutral *)
+    MyInSmpUp := Up;
+    SmpVibUpCnt := MyInSmpUp;
+    (* Vibrato is 'centered' (zero) *)
+    MyInPerPart := MyInPeriod;
+    MyVibratoPos := 0;
+  end;
+end;
+
+
+procedure StartDelayedNote;
+var
+  d, MyNewInPeriod : Integer;
+begin
+  with MySongLogic[MyCh], MySampleLogic[MyCh] do
+  begin
+    (* We can only start a sample (instrument) delayed if we have one specified *)
+    if MyDelayPattern.SampleNumber <= 0 then exit;
+    (* Let's assume it also needs a note to be specified *)
+    if MyDelayPattern.SamplePeriod <= 0 then exit;
+    (* Let's also assume it needs to be even valid *)
+    MyNewInPeriod := AmigaSpeedChk(MyDelayPattern.SamplePeriod);
+    if MyNewInPeriod < 0 then exit;
+
+    (* So we have a go.. *)
+    (* Remember our now ending Pattern as we might have to repeat (part of) it.. *)
+    MyOldPattern := PatDecode;
+    (* Make the Delayed Pattern our current Pattern *)
+    PatDecode := MyDelayPattern;
+
+    (* Set it up for Playback *)
+
+    (* Kill running effects *)
+    RetrigEvery := 0;
+    MyCutNote := -1;
+    MyVolSlide := 0;
+    (* Reset/stop Vibrato since we have a new instrument *)
+    MyVibSpeed := 0;    (* effect stop *)
+    MyVibDepth := 0;    (* effect stop *)
+    MyVibratoPos := 0;  (* engine reset *)
+    (* Reset/stop Porta up/down *)
+    MyPortaSpeed := 0;  (* effect stop *)
+    MyPrtaPerPart := 0; (* engine reset *)
+    (* Reset/stop Porta-to *)
+    MyPortaToSpeed := 0;  (* effect stop *)
+    MyPrtaToPerPart := 0; (* engine reset *)
+    //fixme: kill Arpeggio
+    //fixme: kill Tremolo
+
+    (* Restore Volume to 'default' since a sample is specified *)
+    MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
+
+    (* determine the location and length of our current new sample to play *)
+    MySmpOffset := 0;
+    for d := 0 to PatDecode.SampleNumber - 2 do //is really OK like this!
+      MySmpOffset := MySmpOffset + MySampleInfo[d].Length;
+    MyOldOffset := MySmpOffset;
+
+    MySmpLength := MySampleInfo[PatDecode.SampleNumber-1].Length;
+    MyOldLength := MySmpLength;
+
+    (* Normally we retrigger each new note, but if PortaTo active we keep playing the old note () *)
+    StartCurrentSample(MyNewInPeriod);
+  end;
+end;
+
+
 procedure ChkDoPortaVibrato(MyIncFactor: Integer);
 var
   MyCurPeriod,
@@ -1739,6 +1860,9 @@ begin
       Inc(MyTickCnt);
       if MyTickCnt < ActTckSpeed then
       begin
+        (* If we need to execute a Delayed Note do it now *)
+        if MyDelayNote = MyTickCnt then StartDelayedNote;
+
         if (RetrigEvery > 0) and ((MyTickCnt mod RetrigEvery) = 0) then
         begin
           (* Reset input to first sample (We might skip first part of sample buffer though) *)
@@ -1816,25 +1940,13 @@ begin
   end;
 
   (* find AmigaSpeed in our default (non-finepitched) notes lookup table *)
-  MyInPeriod := -1;
-  for i := 1 to 36 do
-    if (AmigaSpeed > (MyPeriodTable[0, i]-2)) and (AmigaSpeed < (MyPeriodTable[0, i]+2)) then MyInPeriod := i;
+  MyInPeriod := AmigaSpeedChk(AmigaSpeed);
   if MyInPeriod < 0 then
   begin
     (* Amigaspeed not found in table means no sound. Play empty buffer and exit. *)
     Result := PlayEmptySample(MyCh);
     exit;
   end;
-  (* now apply sample's finetune setting and fetch finetuned AmigaSpeed. *)
-  if CBPatDebug.Checked and not MyAppClosing then
-  begin
-    S := '';
-    if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
-    RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(Amigaspeed)+', Index: ' + IntToStr(MyInPeriod) +
-      ', Finetune: ' + IntToStr(FineTune) + ', Outspeed: ' + inttostr(MyPeriodTable[FineTune, MyInPeriod]));
-    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-  end;
-  MyInPeriod := MyPeriodTable[FineTune, MyInPeriod];
 
   (* calculate initial (coarse) up-sample rate *)
   up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPeriod) / MPSettings.MySettings.MyTVSpeed;
