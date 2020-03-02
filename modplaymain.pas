@@ -1092,6 +1092,7 @@ begin
         DoVolParamUpdate(False, False);   (* all Volume effects *)
 
         (* we must repeat the previous sample, but we exec the current effect and period! *)
+        (* Note: The last used period is memorized inside the engine as 'OldAmigaSpeed'(!) *)  //yeah change this!!
         PatDecode.SampleNumber := MyOldPattern.SampleNumber;
 
         (* We don't retrigger the running note since we are finishing up! *)
@@ -1716,7 +1717,7 @@ var
   S            : String;
 
 
-function AmigaSpeedChk(MyAmigaSpeed: Word): Integer;
+function AmigaSpeedChk(MyAmigaSpeed: Word; MyFineTune: ShortInt): Integer;
 var
   Cnt : Integer;
 begin
@@ -1737,10 +1738,10 @@ begin
     S := '';
     if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
     RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(Result) +
-      ', Finetune: ' + IntToStr(FineTune) + ', Outspeed: ' + inttostr(MyPeriodTable[FineTune, Result]));
+      ', Finetune: ' + IntToStr(MyFineTune) + ', Outspeed: ' + inttostr(MyPeriodTable[MyFineTune, Result]));
     RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
   end;
-  Result := MyPeriodTable[FineTune, Result];
+  Result := MyPeriodTable[MyFineTune, Result];
 end;
 
 
@@ -1748,13 +1749,11 @@ procedure StartCurrentSample(MyNewInPeriod : Integer);
 var
   RepeatStart,
   RepeatLength : Integer;
-  MyFineTune   : ShortInt;
 begin
   with MySongLogic[MyCh] do
   begin
     RepeatLength := MySampleInfo[PatDecode.SampleNumber-1].RptLength;
     RepeatStart  := MySampleInfo[PatDecode.SampleNumber-1].RptStart;
-    MyFineTune   := MySampleInfo[PatDecode.SampleNumber-1].FineTune;
 
     (* Setup for playback full sample, including infinite repeats, until it gets overwritten *)
     MySmpPtr := MySamplesPtr+MySmpOffset;
@@ -1762,8 +1761,6 @@ begin
     MyFirstStart := 0;
     MyRptLen := RepeatLength;
     MyRptStart := RepeatStart;
-    AmigaSpeed := PatDecode.SamplePeriod;
-    FineTune := MyFineTune;
   end;
   with MySampleLogic[MyCh] do
   begin
@@ -1772,8 +1769,8 @@ begin
     (* calculate initial (coarse) up-sample rate *)
     Up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPeriod) / MPSettings.MySettings.MyTVSpeed;
     (* New sample starting: point to first buffer position *)
-    (* Please note: 'value-1' below is used because of inter-new-sample-data-connection requirement! *)
-    MyInBufCnt := - 1;
+    (* Please note: zero instead of 'value-1' since we are already busy building the current buffer! *)
+    MyInBufCnt := 0;
     (* Setup neutral *)
     MyInSmpUp := Up;
     SmpVibUpCnt := MyInSmpUp;
@@ -1791,11 +1788,16 @@ begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
     (* We can only start a sample (instrument) delayed if we have one specified *)
-    if MyDelayPattern.SampleNumber <= 0 then exit;
+    if MyDelayPattern.SampleNumber <= 0 then
+    begin
+      if PatDecode.SampleNumber <= 0 then exit;
+      (* We'll restart the already running sample *)
+      MyDelayPattern.SampleNumber := PatDecode.SampleNumber;
+    end;
     (* Let's assume it also needs a note to be specified *)
     if MyDelayPattern.SamplePeriod <= 0 then exit;
     (* Let's also assume it needs to be even valid *)
-    MyNewInPeriod := AmigaSpeedChk(MyDelayPattern.SamplePeriod);
+    MyNewInPeriod := AmigaSpeedChk(MyDelayPattern.SamplePeriod, MySampleInfo[MyDelayPattern.SampleNumber-1].FineTune);
     if MyNewInPeriod < 0 then exit;
 
     (* So we have a go.. *)
@@ -1861,14 +1863,19 @@ begin
       if MyTickCnt < ActTckSpeed then
       begin
         (* If we need to execute a Delayed Note do it now *)
-        if MyDelayNote = MyTickCnt then StartDelayedNote;
-
+        if MyDelayNote = MyTickCnt then
+        begin
+          StartDelayedNote;
+          (* We must set a new target input sample.. (the last done sample (#1) is still the same of course) *)
+          MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64;
+        end;
+        (* If we need to retrigger a running note do it now *)
         if (RetrigEvery > 0) and ((MyTickCnt mod RetrigEvery) = 0) then
         begin
           (* Reset input to first sample (We might skip first part of sample buffer though) *)
           MyInBufCnt := MyFirstStart;
           (* We must set a new target input sample.. (the last done sample (#1) is still the same of course) *)
-          MySample2 := (MySmpPtr[MyFirstStart] shl 8) * MyVolume / 64;
+          MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64;
         end;
         (* get sinusoidal value from position.. *)
         // Fixme: We should add the other possible waveforms.. (Effect E4x: Set Vibrato Waveform)
@@ -1940,7 +1947,7 @@ begin
   end;
 
   (* find AmigaSpeed in our default (non-finepitched) notes lookup table *)
-  MyInPeriod := AmigaSpeedChk(AmigaSpeed);
+  MyInPeriod := AmigaSpeedChk(AmigaSpeed, FineTune);
   if MyInPeriod < 0 then
   begin
     (* Amigaspeed not found in table means no sound. Play empty buffer and exit. *)
@@ -2007,12 +2014,12 @@ begin
         else
           MySample2 := 0;
 
-      (* Keep last newly fetched buffer value for the next buffer as that needs to connect to this one (always!) *)
-      LastInSample := MySample2;
-
       (* We need to end/correct for the previous unfinished sample in time and amplitude first *)
       SmpVibUpCnt := SmpVibUpCnt - (1-InSmpUpRemain);
       ChkDoPortaVibrato(1 + Trunc(SmpVibUpCnt)); (* counting mix sample plus loop samples below *)
+      (* Keep last newly fetched buffer value for the next buffer as that needs to connect to this one (always!) *)
+      (* Note: ChkDoPortaVibrato just might have updated MySample2 just now! *)
+      LastInSample := MySample2;
       (* Determine the upsampling value step per resulting full sample *)
       MySampleStep := (MySample2 - MySample1) / MyInSmpUp;
       (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
@@ -2142,9 +2149,6 @@ begin
   (* Remember our intputfilename plus it's path, but excluding its extension *)
   MyOpenInFile := OpenModFile.FileName;
   MyOpenInFile := Copy(MyOpenInFile, 1, LastDelimiter('.',MyOpenInFile) - 1);
-
- // MyPath := GetCurrentDir + PathDelim + 'derde_oefening_roeli_jo_ruud.wav';
- // sndPlaySound(PChar(MyPath), SND_SYNC or SND_NODEFAULT);
 end;
 
 function TModMain.StartWaveFile(FName: String): Boolean;
