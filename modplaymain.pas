@@ -141,7 +141,6 @@ Type
     MyVibratoPos    : Integer;
     LastInSample,
     InSmpUpRemain   : Single;
-    OldAmigaSpeed   : Word;
     MyInPerPart     : Integer;
     MySmpTCnt       : Integer;
     MyInSmpUp,
@@ -668,7 +667,6 @@ begin
         LastInSample := 0;
         InSmpUpRemain := 0;
         (* We have no previous frequency yet *)
-        OldAmigaSpeed := 0;
         MyInPerPart := 0;
         (* Reset internal Tick Counter *)
         MySmpTCnt := 0;
@@ -1091,9 +1089,10 @@ begin
         DoTremoloUpdate;                  (* all Tremolo effects *)
         DoVolParamUpdate(False, False);   (* all Volume effects *)
 
-        (* we must repeat the previous sample, but we exec the current effect and period! *)
-        (* Note: The last used period is memorized inside the engine as 'OldAmigaSpeed'(!) *)  //yeah change this!!
+        (* We must repeat the previous sample since we don't have one now *)
         PatDecode.SampleNumber := MyOldPattern.SampleNumber;
+        (* If we have no period we need to use the last one issued earlier *)
+        if PatDecode.SamplePeriod = 0 then PatDecode.SamplePeriod := MyOldPattern.SamplePeriod;
 
         (* We don't retrigger the running note since we are finishing up! *)
         RetrigSample := False;
@@ -1188,6 +1187,9 @@ begin
           DoTremoloUpdate;                                   (* all Tremolo effects *)
           DoVolParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Volume effects *)
 
+          (* If we have no period we need to use the last one issued earlier *)
+          if not HasNote then PatDecode.SamplePeriod := MyOldPattern.SamplePeriod;
+
           (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
           if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
 
@@ -1227,11 +1229,16 @@ begin
             DoTremoloUpdate;                         (* all Tremolo effects *)
             DoVolParamUpdate(False, RetrigSample);   (* all Volume effects *)
 
-            (* we must repeat the previous sample, but we exec the current effect and period! *)
+            (* We must repeat the previous sample since we don't have one now *)
             PatDecode.SampleNumber := MyOldPattern.SampleNumber;
+            (* If we have no period we need to use the last one issued earlier *)
+            if not HasNote then PatDecode.SamplePeriod := MyOldPattern.SamplePeriod;
 
             (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
             if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
+
+            (* Remember what we did as we might have to repeat (part of) it.. *)
+            MyOldPattern := PatDecode;
           end
           else
           begin
@@ -1397,7 +1404,6 @@ begin
     LastInSample := 0;
     InSmpUpRemain := 0;
     (* We have no previous frequency yet *)
-    OldAmigaSpeed := 0;
     MyInPerPart := 0;
     (* Reset internal Tick Counter *)
     MySmpTCnt := 0;
@@ -1938,13 +1944,6 @@ begin
 
   (* We keep track of our locally 'generated' ticks *)
   MyTickCnt := 0;
-
-  (* if no new period is supplied, we are supposed to re-use the previous one! *)
-  with MySampleLogic[MyCh] do
-  begin
-    if AmigaSpeed = 0 then AmigaSpeed := OldAmigaSpeed;
-    OldAmigaSpeed := AmigaSpeed;
-  end;
 
   (* find AmigaSpeed in our default (non-finepitched) notes lookup table *)
   MyInPeriod := AmigaSpeedChk(AmigaSpeed, FineTune);
