@@ -2218,7 +2218,8 @@ function TModMain.LoadFile(MyFile: String): Boolean;
 var
   a, MyCorr,
   MyFileSize,
-  MyCalcSize : Integer;
+  MyCalcSize,
+  MySongLen  : Integer;
   TF         : File;
   Supported  : Boolean;
   MyTmpPtr   : PInt8;
@@ -2364,11 +2365,23 @@ begin
     end;
     (* Determine the number of patterns in the file *)
     IgnSetNrOfPats := 0;
+    MySongLen := 0;
     for a := 0 to 127 do
+    begin
       (* Workaround: Some files have illegal entries not tied to the pattern tables (Pinball Dreams Intro mod (val = 255)) *)
       if (Patterns[a] < MyMediaRec.MaxPatTables) and (Patterns[a] > IgnSetNrOfPats) then
         IgnSetNrOfPats := Patterns[a];
+      (* Workaround: Also doublecheck the reported song length, and patch if we determine the song to be longer *)
+      if (Patterns[a] > 0) and (a >= MySongLen) then
+        MySongLen := a + 1;
+    end;
     Inc(IgnSetNrOfPats);
+    (* Patch file's reported song length if needed *)
+    if SongLength < MySongLen then
+    begin
+      RunDecInfo.Items.Add('Corrected song length (file reports ' + IntToStr(SongLength) + ', found ' + IntToStr(MySongLen) + ').');
+      SongLength := MySongLen;
+    end;
     (* Determine the total patterns size in bytes *)
     MyTotalPatternSize := MyMediaRec.Channels * 4 * 64 * IgnSetNrOfPats;
     (* Determine the total Samples size in bytes *)
