@@ -350,9 +350,9 @@ begin
   for ChIn := 1 to MyMediaRec.Channels do
     with MySongLogic[ChIn] do
     begin
-      (* When a channel reaches the end of a pattern table advance all channels to the next one in the song *)
+      (* When a channel reaches the end of a pattern table advance all channels to the next one (in the song or ending) *)
       (* Note: without this provision Pattern Loops will mess things up big time.. *)
-      if (MyPatTabPos > 63) and not Cmd11 and not Cmd13 then
+      if ((MyPatTabPos > 63) or (MySongPos >= MyFileHeader.SongLength)) and not Cmd11 and not Cmd13 then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
         begin
@@ -726,7 +726,7 @@ end;
 
 procedure TModMain.ExecNote(MyCh: Integer);
 var
-  d            : Integer;
+  d, MyShowPos : Integer;
   HasNote,
   RetrigSample : Boolean;
   S            : String;
@@ -1135,12 +1135,18 @@ begin
                     (MyPatTabPos*MyMediaRec.Channels)+
                     (MyPatTabNr*MyMediaRec.Channels*64)], True);
 
+        (* Always show the table position we are actually playing *)
+        if MyPatDelaying then
+          MyShowPos := MyPatTabPos - 1
+        else
+          MyShowPos := MyPatTabPos;
+
         if CBPatDebug.Checked then
         begin
           S := 'Ch' + IntToStr(MyCh) +
                Format(': SP %03d', [MySongPos]) +
                Format(', PT %02d', [MyPatTabNr]) +
-               Format('; Ind %02d', [MyPatTabPos]) +
+               Format('; Ind %02d', [MyShowPos]) +
                Format('; Smp %02d', [PatDecode.SampleNumber]) +
                Format(': Per %03d', [PatDecode.SamplePeriod]) +
                ', Eff $' + ByteToHexString(PatDecode.EffectNumber) +
