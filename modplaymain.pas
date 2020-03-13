@@ -118,6 +118,7 @@ Type
     MyVibDepth,
     OldVibSpeed,
     OldVibDepth,
+    MyArpeggio,
     MyCutNote,
     MyDelayNote,
     MyPatDelayNr,
@@ -141,7 +142,6 @@ Type
     MyVibratoPos    : Integer;
     LastInSample,
     InSmpUpRemain   : Single;
-    MyInPerPart     : Integer;
     MySmpTCnt       : Integer;
     MyInSmpUp,
     SmpVibUpCnt     : Single;
@@ -251,7 +251,7 @@ var
 implementation
 
 uses
-  dlg_aboutbox, dlg_mediainfo, GlobalFunctions, Dlg_MPSettings;
+  dlg_aboutbox, dlg_mediainfo, GlobalFunctions, Dlg_MPSettings, Math;
 
 {$R *.lfm}
 
@@ -634,6 +634,8 @@ begin
         MyVibDepth := 0;
         OldVibSpeed := 0;
         OldVibDepth := 0;
+        (* No Arpeggio active *)
+        MyArpeggio := 0;
         (* No Cutnote active *)
         MyCutNote := -1;
         (* No Delaynote active *)
@@ -666,8 +668,6 @@ begin
         (* Our 'previous buffer's last sample' is zero (we are not connected there since we are just starting a new song!) *)
         LastInSample := 0;
         InSmpUpRemain := 0;
-        (* We have no previous frequency yet *)
-        MyInPerPart := 0;
         (* Reset internal Tick Counter *)
         MySmpTCnt := 0;
         (* No upsample factor known yet *)
@@ -1006,12 +1006,9 @@ procedure DoArpeggioUpdate;
 begin
   with MySongLogic[MyCh] do
   begin
+    MyArpeggio := 0;
     if (PatDecode.EffectNumber = 0) and (PatDecode.EffectParam <> 0) then
-    begin
-      //fixme: add Arpeggio
-      RunDecInfo.Items.Add('Warning: Arpeggio not yet implemented!');
-      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-    end;
+      MyArpeggio := PatDecode.EffectParam;
 
     if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
     begin
@@ -1433,6 +1430,8 @@ begin
     MyVibDepth := 0;
     OldVibSpeed := 0;
     OldVibDepth := 0;
+    (* No Arpeggio active *)
+    MyArpeggio := 0;
     (* No Cutnote active *)
     MyCutNote := -1;
     (* No Delaynote active *)
@@ -1463,8 +1462,6 @@ begin
     (* Our 'previous buffer's last sample' is zero (we are not connected there since we are just starting a new song!) *)
     LastInSample := 0;
     InSmpUpRemain := 0;
-    (* We have no previous frequency yet *)
-    MyInPerPart := 0;
     (* Reset internal Tick Counter *)
     MySmpTCnt := 0;
     (* No upsample factor known yet *)
@@ -1770,8 +1767,9 @@ end;
 function TModMain.PlaySample(MyCh: Integer;
   MySmpPtr: PInt8; MyBufLen, MyFirstStart, MyRptLen, MyRptStart: Integer; AmigaSpeed: Word; FineTune: ShortInt): Boolean;
 var
-  MyInPeriod,
+  MyInPerPart,
   MyFullBufLen,
+  FineTuneIdx,
   OutCnt, i    : Integer;
   MyVibDelta   : Single;
   MySample1,
@@ -1783,7 +1781,7 @@ var
   S            : String;
 
 
-function AmigaSpeedChk(MyAmigaSpeed: Word; MyFineTune: ShortInt): Integer;
+function AmigaSpeedChk(MyAmigaSpeed: Word; MyFineTune: ShortInt; out MyTabIdx: Integer): Integer;
 var
   Cnt : Integer;
 begin
@@ -1792,22 +1790,25 @@ begin
 
   for Cnt := 1 to 36 do
     if (MyAmigaSpeed > (MyPeriodTable[0, Cnt]-2)) and (MyAmigaSpeed < (MyPeriodTable[0, Cnt]+2)) then Result := Cnt;
+  (* save for future reference (Arpeggio) *)
+  MyTabIdx := Result;
+
   if Result < 0 then
   begin
     (* Amigaspeed not found in table means no sound. *)
     exit;
   end;
-
   (* now apply sample's finetune setting and fetch finetuned AmigaSpeed. *)
+  Result := MyPeriodTable[MyFineTune, MyTabIdx];
+
   if CBPatDebug.Checked and not MyAppClosing then
   begin
     S := '';
     if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
-    RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(Result) +
-      ', Finetune: ' + IntToStr(MyFineTune) + ', Outspeed: ' + inttostr(MyPeriodTable[MyFineTune, Result]));
+    RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(MyTabIdx) +
+      ', Finetune: ' + IntToStr(MyFineTune) + ', Outspeed: ' + inttostr(Result));
     RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
   end;
-  Result := MyPeriodTable[MyFineTune, Result];
 end;
 
 
@@ -1831,9 +1832,9 @@ begin
   with MySampleLogic[MyCh] do
   begin
     (* We already determined our official finepitched correct AmigaSpeed, apply it now *)
-    MyInPeriod := MyNewInPeriod;
+    MyInPerPart := MyNewInPeriod;
     (* calculate initial (coarse) up-sample rate *)
-    Up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPeriod) / MPSettings.MySettings.MyTVSpeed;
+    Up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPerPart) / MPSettings.MySettings.MyTVSpeed;
     (* New sample starting: point to first buffer position *)
     (* Please note: zero instead of 'value-1' since we are already busy building the current buffer! *)
     MyInBufCnt := 0;
@@ -1841,7 +1842,6 @@ begin
     MyInSmpUp := Up;
     SmpVibUpCnt := MyInSmpUp;
     (* Vibrato is 'centered' (zero) *)
-    MyInPerPart := MyInPeriod;
     MyVibratoPos := 0;
   end;
 end;
@@ -1849,7 +1849,8 @@ end;
 
 procedure StartDelayedNote;
 var
-  d, MyNewInPeriod : Integer;
+  d, MyDummy,
+  MyNewInPeriod  : Integer;
 begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
@@ -1863,7 +1864,7 @@ begin
     (* Let's assume it also needs a note to be specified *)
     if MyDelayPattern.SamplePeriod <= 0 then exit;
     (* Let's also assume it needs to be even valid *)
-    MyNewInPeriod := AmigaSpeedChk(MyDelayPattern.SamplePeriod, MySampleInfo[MyDelayPattern.SampleNumber-1].FineTune);
+    MyNewInPeriod := AmigaSpeedChk(MyDelayPattern.SamplePeriod, MySampleInfo[MyDelayPattern.SampleNumber-1].FineTune, MyDummy);
     if MyNewInPeriod < 0 then exit;
 
     (* So we have a go.. *)
@@ -1879,16 +1880,18 @@ begin
     MyCutNote := -1;
     MyVolSlide := 0;
     (* Reset/stop Vibrato since we have a new instrument *)
-    MyVibSpeed := 0;    (* effect stop *)
-    MyVibDepth := 0;    (* effect stop *)
-    MyVibratoPos := 0;  (* engine reset *)
+    MyVibSpeed := 0;   (* effect stop *)
+    MyVibDepth := 0;   (* effect stop *)
+    MyVibratoPos := 0; (* engine reset *)
     (* Reset/stop Porta up/down *)
     MyPortaSpeed := 0;  (* effect stop *)
     MyPrtaPerPart := 0; (* engine reset *)
     (* Reset/stop Porta-to *)
     MyPortaToSpeed := 0;  (* effect stop *)
     MyPrtaToPerPart := 0; (* engine reset *)
-    //fixme: kill Arpeggio
+    (* No Arpeggio active *)
+    MyArpeggio := 0; (* effect stop/engine reset *)
+
     //fixme: kill Tremolo
 
     (* Restore Volume to 'default' since a sample is specified *)
@@ -1952,6 +1955,15 @@ begin
         (* rotate through sinetable.. *)
         MyVibratoPos := MyVibratoPos + MyVibSpeed;
         if MyVibratoPos > 31 then MyVibratoPos := MyVibratoPos - 64;
+        (* do arpeggio effect.. *)
+        if MyArpeggio <> 0 then
+        begin
+          case MyTickCnt mod 3 of
+            0: MyInPerPart := MyPeriodTable[FineTune,     FineTuneIdx];
+            1: MyInPerPart := MyPeriodTable[FineTune, Min(FineTuneIdx + (MyArpeggio and $f0) shr 4, 36)];
+            2: MyInPerPart := MyPeriodTable[FineTune, Min(FineTuneIdx + (MyArpeggio and $0f) shr 0, 36)];
+          end;
+        end;
         (* do porta-to-note effect as well.. *)
         if MyPortaToSpeed <> 0 then
         begin
@@ -2006,8 +2018,8 @@ begin
   MyTickCnt := 0;
 
   (* find AmigaSpeed in our default (non-finepitched) notes lookup table *)
-  MyInPeriod := AmigaSpeedChk(AmigaSpeed, FineTune);
-  if MyInPeriod < 0 then
+  MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
+  if MyInPerPart < 0 then
   begin
     (* Amigaspeed not found in table means no sound. Play empty buffer and exit. *)
     Result := PlayEmptySample(MyCh);
@@ -2015,7 +2027,7 @@ begin
   end;
 
   (* calculate initial (coarse) up-sample rate *)
-  up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPeriod) / MPSettings.MySettings.MyTVSpeed;
+  up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPerPart) / MPSettings.MySettings.MyTVSpeed;
 
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
@@ -2032,7 +2044,6 @@ begin
       MySmpTCnt := 0;
       (* Vibrato is 'centered' (zero) _only_ at new sample start! *)
       // Fixme: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or not)
-      MyInPerPart := MyInPeriod;
       MyVibratoPos := 0;
       (* Cancel possible buffer interconnection data as we do a 'fresh start' *)
       MyConBufFill := 0;
