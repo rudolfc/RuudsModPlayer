@@ -926,6 +926,30 @@ begin
         (* effect stop, keeping period modifier in place (failsafe) *)
         if MyPortaToGoal = 0 then MyPortaToSpeed := 0;
       end;
+
+    if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
+    begin
+      if (PatDecode.EffectParam shr 4) = 1 then (* cmd: effect Fine Porta Up *)
+      begin
+        //fixme: add Fine Porta Up
+        RunDecInfo.Items.Add('Warning: Fine Porta Up not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
+
+      if (PatDecode.EffectParam shr 4) = 2 then (* cmd: effect Fine Porta Down *)
+      begin
+        //fixme: add Fine Porta Down
+        RunDecInfo.Items.Add('Warning: Fine Porta Down not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
+
+      if (PatDecode.EffectParam shr 4) = 3 then (* cmd: effect Glissando Control *)
+      begin
+        //fixme: add Glissando Control (used for modification of Porta to Note)
+        RunDecInfo.Items.Add('Warning: Glissando Control not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
+    end;
   end;
 end;
 
@@ -965,6 +989,16 @@ begin
         MyVibDepth := OldVibDepth;
       end;
     end;
+
+    if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
+    begin
+      if (PatDecode.EffectParam shr 4) = 4 then (* cmd: effect Vibrato Waveform/Retrig *)
+      begin
+        //fixme: add Vibrato Waveform/Retrig
+        RunDecInfo.Items.Add('Warning: Vibrato Waveform/Retrig not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
+    end;
   end;
 end;
 
@@ -978,6 +1012,16 @@ begin
       RunDecInfo.Items.Add('Warning: Arpeggio not yet implemented!');
       RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
     end;
+
+    if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
+    begin
+      if (PatDecode.EffectParam shr 4) = 5 then (* cmd: effect Set Finetune *)
+      begin
+        //fixme: add Set Finetune
+        RunDecInfo.Items.Add('Warning: Set Finetune not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
+    end;
   end;
 end;
 
@@ -990,6 +1034,16 @@ begin
       //fixme: add Tremolo
       RunDecInfo.Items.Add('Warning: Tremolo not yet implemented!');
       RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+    end;
+
+    if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
+    begin
+      if (PatDecode.EffectParam shr 4) = 7 then (* cmd: effect Tremolo Waveform/Retrig *)
+      begin
+        //fixme: add Tremolo Waveform/Retrig
+        RunDecInfo.Items.Add('Warning: Tremolo Waveform/Retrig not yet implemented!');
+        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      end;
     end;
   end;
 end;
