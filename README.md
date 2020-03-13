@@ -9,7 +9,7 @@ It's a basic player which currently has the following functionality:
 - Plays M.K., M!K! and such files;
 - Outputs in stereo to the soundcard using a samplerate you can specify (changeable only when no song is currently playing);
 - You can specify if the player should use NTSC or PAL timing (on the fly while playing);
-- You can output to cannonical wave files;
+- You can output to canonical wav files;
 - You can view the file content (samples, all pattern tables, etc)
 - You can show debug output onscreen while playing a song (tracker info);
 - You can play the raw samples on a fixed speed.
