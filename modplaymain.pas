@@ -142,7 +142,8 @@ Type
     MyVibratoPos    : Integer;
     LastInSample,
     InSmpUpRemain   : Single;
-    MySmpTCnt       : Integer;
+    MySmpTCnt,
+    MyOldInPerPart  : Integer;
     MyInSmpUp,
     SmpVibUpCnt     : Single;
     MyConBufContent : Array[0..MyConBufSize-1] of SmallInt;
@@ -665,6 +666,7 @@ begin
         MyPrtaPerPart := 0;
         MyPrtaToPerPart := 0;
         MyVibratoPos := 0;
+        MyOldInPerPart := -1;
         (* Our 'previous buffer's last sample' is zero (we are not connected there since we are just starting a new song!) *)
         LastInSample := 0;
         InSmpUpRemain := 0;
@@ -1457,6 +1459,7 @@ begin
     MyPrtaPerPart := 0;
     MyPrtaToPerPart := 0;
     MyVibratoPos := 0;
+    MyOldInPerPart := -1;
     (* start at sample start *)
     MyInBufCnt := -1;
     (* Our 'previous buffer's last sample' is zero (we are not connected there since we are just starting a new song!) *)
@@ -2017,8 +2020,16 @@ begin
   (* We keep track of our locally 'generated' ticks *)
   MyTickCnt := 0;
 
-  (* find AmigaSpeed in our default (non-finepitched) notes lookup table *)
-  MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
+  with MySongLogic[MyCh], MySampleLogic[MyCh] do
+  begin
+    (* Find AmigaSpeed in our default (non-finepitched) notes lookup table *)
+    MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
+    (* -Only- if effect PortaTo is running we need to keep being based on the old period value.. *)
+    if MyPortaToSpeed <> 0 then MyInPerPart := MyOldInPerPart;
+    (* .. so remember the current period value in use. *)
+    MyOldInPerPart := MyInPerPart;
+  end;
+
   if MyInPerPart < 0 then
   begin
     (* Amigaspeed not found in table means no sound. Play empty buffer and exit. *)
