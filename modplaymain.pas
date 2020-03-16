@@ -331,22 +331,25 @@ begin
   begin
     with MySongLogic[MyCh] do
     begin
-      (* First update MyPatTabPos if needed (see routine ExecNote) *)
-      if not MyPatTabRunning and not MyPatBreak then MyPatTabPos := 0;
-      (* Fetch our channel's Pattern *)
-      PatDecode := DecodePattern(MyPatternPtr[(MyCh-1)+
-                  (MyPatTabPos*MyMediaRec.Channels)+
-                  (MyPatTabNr*MyMediaRec.Channels*64)], True);
-
-      (* Process effect 'Set Speed' (effects all channels) *)
-      if PatDecode.EffectNumber = 15 then
+      if not MySongEnding then
       begin
-        (* Range: xy = 00h-1Fh for speed; xy = 20h-FFh for BPM *)
-        (* Note: The rate in Hz is equal to Hz = bpm * 2 / 5 (125BPM = 50Hz = 20mS) *)
-        if PatDecode.EffectParam >= 32 then
-          TmrInterval := 5000 / (PatDecode.EffectParam * 2)
-        else
-          TickSpeed := PatDecode.EffectParam;
+        (* First update MyPatTabPos if needed (see routine ExecNote) *)
+        if not MyPatTabRunning and not MyPatBreak then MyPatTabPos := 0;
+        (* Fetch our channel's Pattern *)
+        PatDecode := DecodePattern(MyPatternPtr[(MyCh-1)+
+                    (MyPatTabPos*MyMediaRec.Channels)+
+                    (MyPatTabNr*MyMediaRec.Channels*64)], True);
+
+        (* Process effect 'Set Speed' (effects all channels) *)
+        if PatDecode.EffectNumber = 15 then
+        begin
+          (* Range: xy = 00h-1Fh for speed; xy = 20h-FFh for BPM *)
+          (* Note: The rate in Hz is equal to Hz = bpm * 2 / 5 (125BPM = 50Hz = 20mS) *)
+          if PatDecode.EffectParam >= 32 then
+            TmrInterval := 5000 / (PatDecode.EffectParam * 2)
+          else
+            TickSpeed := PatDecode.EffectParam;
+        end;
       end;
     end;
   end;
