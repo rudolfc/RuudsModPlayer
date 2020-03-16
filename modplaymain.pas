@@ -95,8 +95,6 @@ Const
 
 Type
   TSongLogic = record
-    MyTmrInterval   : Single;
-    MyTickSpeed,
     MyPrevSongPos,
     MySongPos,
     MyPatTabNr,
@@ -186,6 +184,7 @@ Type
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure menuMPSettingsClick(Sender: TObject);
+    procedure ParseSpeedControl;
     procedure ParseRunControl;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -207,8 +206,8 @@ Type
     MySongLogic    : Array[1..MaxNumChBufs] of TSongLogic;
     MySampleLogic  : Array[1..MaxNumChBufs] of TSampleLogic;
 
-    ActTckSpeed    : Byte;
-    ActTmrInterval : Single;
+    TickSpeed      : Byte;
+    TmrInterval    : Single;
     MasterVolume   : Integer;
     PlayingRaw     : Boolean;
     BufNr          : Byte;
@@ -308,6 +307,7 @@ BEGIN
   end;
 
   (* Process all channels *)
+  ParseSpeedControl;
   For Ch := 1 to MyMediaRec.Channels do ExecNote(Ch);
   MixAndOutputSamples(False);
   ParseRunControl;
@@ -322,6 +322,35 @@ BEGIN
   (* Check/execute Stop *)
   if StoppingMySong or MyAppClosing then StopPlaying;
 END;
+
+procedure TModMain.ParseSpeedControl;
+var
+  MyCh  : Integer;
+begin
+  For MyCh := 1 to MyMediaRec.Channels do
+  begin
+    with MySongLogic[MyCh] do
+    begin
+      (* First update MyPatTabPos if needed (see routine ExecNote) *)
+      if not MyPatTabRunning and not MyPatBreak then MyPatTabPos := 0;
+      (* Fetch our channel's Pattern *)
+      PatDecode := DecodePattern(MyPatternPtr[(MyCh-1)+
+                  (MyPatTabPos*MyMediaRec.Channels)+
+                  (MyPatTabNr*MyMediaRec.Channels*64)], True);
+
+      (* Process effect 'Set Speed' (effects all channels) *)
+      if PatDecode.EffectNumber = 15 then
+      begin
+        (* Range: xy = 00h-1Fh for speed; xy = 20h-FFh for BPM *)
+        (* Note: The rate in Hz is equal to Hz = bpm * 2 / 5 (125BPM = 50Hz = 20mS) *)
+        if PatDecode.EffectParam >= 32 then
+          TmrInterval := 5000 / (PatDecode.EffectParam * 2)
+        else
+          TickSpeed := PatDecode.EffectParam;
+      end;
+    end;
+  end;
+end;
 
 procedure TModMain.ParseRunControl;
 var
@@ -408,15 +437,6 @@ begin
           MySongLogic[ChOut].MyPatDelaying := MyPatDelaying;
         end;
       end;
-      (* Copy 'Set Speed' cmd results to global system (effects all channels) *)
-      if PatDecode.EffectNumber = 15 then
-      begin
-        (* Often both variants occur in the same row *)
-        if PatDecode.EffectParam >= 32 then
-          ActTmrInterval := MyTmrInterval
-        else
-          ActTckspeed := MyTickSpeed;
-      end;
       (* Check for/signal song end: Wait for all channels to finish their songs *)
       if MySongDone then Inc(ChSongDone);
     end;
@@ -444,7 +464,7 @@ begin
 
   MyMediaRec.FileLoaded := False;
   MyFileHeader.FileID:= '    ';
-  ActTckSpeed := DefaultTckSpeed;
+  TickSpeed := DefaultTckSpeed;
   MasterVolume := 64;
   MySongPaused := False;
   WaveOutIsOpen := False;
@@ -624,6 +644,7 @@ begin
         MyVolume := 64;
         (* Trigger samples normally *)
         RetrigEvery := 0;
+        MySmpSkipLen := 0;
         (* No Porta active *)
         MyPortaSpeed := 0;
         (* No PortaTo active *)
@@ -648,12 +669,6 @@ begin
         (* No Pattern Loop active *)
         MyPatLoopPos := -1;
         MyPatLoopNr := 0;
-        (* Set default speed (request) *)
-        if OrigFormatFile then
-          MyTmrInterval := OrigFmtTmrSpeed
-        else
-          MyTmrInterval := DefaultTmrSpeed;
-        MyTickSpeed := DefaultTckSpeed;
         (* We are _starting_ a song *)
         MySongEnding := False;
         MySongDone := False;
@@ -682,12 +697,12 @@ begin
       end;
     end;
 
-    (* Set default speed (Actual) *)
+    (* Set default speed *)
     if OrigFormatFile then
-      ActTmrInterval := OrigFmtTmrSpeed
+      TmrInterval := OrigFmtTmrSpeed
     else
-      ActTmrInterval := DefaultTmrSpeed;
-    ActTckSpeed := DefaultTckSpeed;
+      TmrInterval := DefaultTmrSpeed;
+    TickSpeed := DefaultTckSpeed;
   end;
 
   (* Start *)
@@ -1350,15 +1365,6 @@ begin
           (* Exiting current table *)
           MyPatTabRunning := False;
         end;
-        if PatDecode.EffectNumber = 15 then //set speed
-        begin
-          (* Range: xy = 00h-1Fh for speed; xy = 20h-FFh for BPM *)
-          (* Note: The rate in Hz is equal to Hz = bpm * 2 / 5 (125BPM = 50Hz = 20mS) *)
-          if PatDecode.EffectParam >= 32 then
-            MyTmrInterval := 5000 / (PatDecode.EffectParam * 2)
-          else
-            MyTickSpeed := PatDecode.EffectParam;
-        end;
       end;
 
       if not MyPatTabRunning then
@@ -1446,9 +1452,7 @@ begin
     MyPatLoopNr := 0;
     (* Trigger samples normally *)
     RetrigEvery := 0;
-    (* Set default speed (request) *)
-    MyTmrInterval := DefaultTmrSpeed;
-    MyTickSpeed := DefaultTckSpeed;
+    MySmpSkipLen := 0;
     (* We are _starting_ a 'song' *)
     MySongEnding := False;
     MySongDone := False;
@@ -1477,9 +1481,9 @@ begin
   end;
 
   (* Note: currently we don't use the timer to play raw. Instead we call PlaySample directly.. *)
-  (* Set Default speed (Actual) *)
-  ActTmrInterval := DefaultTmrSpeed;
-  ActTckSpeed := DefaultTckSpeed;
+  (* Set Default speed *)
+  TmrInterval := DefaultTmrSpeed;
+  TickSpeed := DefaultTckSpeed;
 
   (* Determine output filename *)
   MyOutFileName := MyOpenInFile + '_raw_';
@@ -1924,7 +1928,7 @@ begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
     Inc(MySmpTCnt, MyIncFactor);
-    MyTickTime := Round(ActTmrInterval * MPSettings.MySettings.OutSampleRate / 1000);
+    MyTickTime := Round(TmrInterval * MPSettings.MySettings.OutSampleRate / 1000);
     (* Execute once per 'Tick' -excluding Tick 0- .. *)
     if MySmpTcnt >= MyTickTime then
     begin
@@ -1932,7 +1936,7 @@ begin
       MySmpTCnt := MySmpTcnt - MyTickTime;
       (* Keep track of the ticks executed.. *)
       Inc(MyTickCnt);
-      if MyTickCnt < ActTckSpeed then
+      if MyTickCnt < TickSpeed then
       begin
         (* If we need to execute a Delayed Note do it now *)
         if MyDelayNote = MyTickCnt then
@@ -2061,7 +2065,7 @@ begin
     end;
 
     (* We determine our output buffer size per note: tick-time * nr-ticks-per-note *)
-    MyOutBufLen := Round(ActTmrInterval * ActTckSpeed * MPSettings.MySettings.OutSampleRate / 1000);
+    MyOutBufLen := Round(TmrInterval * TickSpeed * MPSettings.MySettings.OutSampleRate / 1000);
     (* First place still pending data from the previous buffer in our output buffer (if any) *)
     for i := 0 to MyConBufFill - 1 do
       MyChBuf[MyCh][i] := MyConBufContent[i];
@@ -2173,7 +2177,7 @@ begin
   with MySampleLogic[MyCh] do
   begin
     (* We determine our output buffer size per note: tick-time * nr-ticks-per-note *)
-    MyOutBufLen := Round(ActTmrInterval * ActTckSpeed * MPSettings.MySettings.OutSampleRate / 1000);
+    MyOutBufLen := Round(TmrInterval * TickSpeed * MPSettings.MySettings.OutSampleRate / 1000);
     (* We have no period available: simulate it (using 4) as we need to slowly fallback from current DC-level to zero *)
     Up := 4;
 
