@@ -2512,28 +2512,9 @@ begin
       end;
       (* Determine if we have (a) extra Pattern table(s) *)
       a := MyFileSize - MyCalcSize;
-      if a mod (MyMediaRec.Channels * 4 * 64) <> 0 then
-      begin
-        RunDecInfo.Items.Add('File to big with non-Pattern table size factor, skipping pre-sampledata surplus space.');
-        (* 'Dump' the pre-sampledata surplus at the end of our Patterns tables: it does not do any harm there. *)
-        MyTotalPatternSize := MyTotalPatternSize + a;
-      end
-      else
-      begin
-        (* We have (a) extra Pattern table(s) *)
-        a := a div (MyMediaRec.Channels * 4 * 64);
-        RunDecInfo.Items.Add('File has ' + IntToStr(a) + ' extra Pattern table(s), adding Patterns to song.');
-        (* Add them 'in order' to the end of our Song and hope for the best. *)
-        While a > 0 do
-        begin
-          Patterns[SongLength] := IgnSetNrOfPats;
-          Inc(SongLength);
-          Inc(IgnSetNrOfPats);
-          Dec(a);
-        end;
-        (* Finally correct the total patterns size in bytes so we load it all correctly. *)
-        MyTotalPatternSize := MyMediaRec.Channels * 4 * 64 * IgnSetNrOfPats;
-      end;
+      RunDecInfo.Items.Add('File to big, skipping pre-sampledata surplus space.');
+      (* 'Dump' the pre-sampledata surplus at the end of our Patterns tables: it does not do any harm there. *)
+      MyTotalPatternSize := MyTotalPatternSize + a;
     end;
 
     (* Load our pattern data (#Channels * 4 (= entry size) * 64 (= entries) * (= #Patterns) *)
