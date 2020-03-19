@@ -1528,22 +1528,26 @@ begin
       PlayingRaw := True;
       with MySampleInfo[CBSample.ItemIndex-1] do
       begin
-        if CbRepeat.Checked then
+        (* Only play really existing samples *)
+        if Length > 2 then
         begin
-          (* Also repeat samples that aren't instructed to do so in the file *)
-          MyRawRptLen := RptLength;
-          if MyRawRptLen <= 2 then MyRawRptLen := Length - RptStart;
-        end
-        else
-          MyRawRptLen := 0; (* force no repeat *)
+          if CbRepeat.Checked then
+          begin
+            (* Also repeat samples that aren't instructed to do so in the file *)
+            MyRawRptLen := RptLength;
+            if MyRawRptLen <= 2 then MyRawRptLen := Length - RptStart;
+          end
+          else
+            MyRawRptLen := 0; (* force no repeat *)
 
-        (* play full sample including repeats (if requested) *)
-        while (MyInBufCnt < Length) and PlayingRaw do
-        begin
-          PlaySample(1, MySamplesPtr + MyRawOffset, Length, 0, MyRawRptLen, RptStart, 428, FineTune); (* 428 denotes C2 (C, 2nd octave) *)
-          MixAndOutputSamples(True);
-          sleep(5);
-          Application.processmessages;
+          (* play full sample including repeats (if requested) *)
+          while (MyInBufCnt < Length) and PlayingRaw do
+          begin
+            PlaySample(1, MySamplesPtr + MyRawOffset, Length, 0, MyRawRptLen, RptStart, 428, FineTune); (* 428 denotes C2 (C, 2nd octave) *)
+            MixAndOutputSamples(True);
+            sleep(5);
+            Application.processmessages;
+          end;
         end;
       end;
     end;
@@ -2037,9 +2041,10 @@ begin
     MyOldInPerPart := MyInPerPart;
   end;
 
-  if MyInPerPart < 0 then
+  (* Amigaspeed not found in table means no sound; Only play really existing samples *)
+  if (MyInPerPart < 0) or (MyBufLen <= 2) then
   begin
-    (* Amigaspeed not found in table means no sound. Play empty buffer and exit. *)
+    (* Play empty buffer and exit. *)
     Result := PlayEmptySample(MyCh);
     exit;
   end;
@@ -2159,6 +2164,7 @@ begin
       MyConBufFill := 0;
 end;
 
+//fixme: we should still check if a Delayed Note should be started.. (?)
 function TModMain.PlayEmptySample(MyCh: Integer): Boolean;
 var
   OutCnt, i    : Integer;
