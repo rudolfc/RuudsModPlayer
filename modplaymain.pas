@@ -2504,9 +2504,13 @@ begin
         (* Workaround: sometimes empty samples mistakenly have size '2'. Correct.. *)
         if MyCorr <> 0 then
         begin
-          RunDecInfo.Items.Add('Empty samples marked non-empty, decreasing samplesize expectation (' + IntToStr(MyCorr) + ').');
+          RunDecInfo.Items.Add('Empty samples marked non-empty, decreasing samplesize expectation ('
+                                                                     + IntToStr(MyCorr) + ') and patching sample data.');
           Dec(MyTotalSampleSize, MyCorr);
           Dec(MyCalcSize, MyCorr);
+          (* Aside from patching the total samplesize, we also must fix the individual samples the patch applies for. *)
+          for a := 0 to MyMediaRec.MaxSamples - 1 do
+            if MySampleInfo[a].Length <= 2 then MySampleInfo[a].Length := 0;
         end;
       end;
       (* Recheck if file still to small *)
