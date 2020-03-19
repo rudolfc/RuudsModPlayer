@@ -2479,29 +2479,31 @@ begin
     for a := 0 to MyMediaRec.MaxSamples - 1 do
     begin
       MyTotalSampleSize := MyTotalSampleSize + MySampleInfo[a].Length;
+      (* Workaround: Keep track of possible samples with size 2 that have got no space in the file *)
       if (MySampleInfo[a].Length <= 2) and (MySampleInfo[a].RptLength <= 2) then
         Inc(MyCorr, MySampleInfo[a].Length);
-    end;
-    (* Workaround: sometimes empty samples mistakenly have size '2'. Correct.. *)
-    if MyCorr <> 0 then
-    begin
-      RunDecInfo.Items.Add('Empty samples marked non-empty, decreasing samplesize expectation (' + IntToStr(MyCorr) + ').');
-      Dec(MyTotalSampleSize, MyCorr);
     end;
     (* Check for filesize error.. *)
     MyFileSize := FileSize(TF);
     MyCalcSize := SizeOf(TModFileHeader) + MyTotalPatternSize + MyTotalSampleSize;
     if OrigFormatFile then MyCalcSize := MyCalcSize - 16 * SizeOf(TModFileSampleInfo) - 4;
     if MyFileSize = MyCalcSize then
-    begin
-      if MyCorr = 0 then
-        RunDecInfo.Items.Add('Total filesize OK (' + IntToStr(MyFileSize) + ').')
-      else
-        RunDecInfo.Items.Add('Corrected total filesize expectation OK (' + IntToStr(MyFileSize) + ').');
-    end
+      RunDecInfo.Items.Add('Total filesize OK (' + IntToStr(MyFileSize) + ').')
     else
     begin
       RunDecInfo.Items.Add('Filesize error: Expected ' + IntToStr(MyCalcSize) + ', Got ' + IntToStr(MyFileSize) + '.');
+      (* Check if file too small *)
+      if MyFileSize < MyCalcSize then
+      begin
+        (* Workaround: sometimes empty samples mistakenly have size '2'. Correct.. *)
+        if MyCorr <> 0 then
+        begin
+          RunDecInfo.Items.Add('Empty samples marked non-empty, decreasing samplesize expectation (' + IntToStr(MyCorr) + ').');
+          Dec(MyTotalSampleSize, MyCorr);
+          Dec(MyCalcSize, MyCorr);
+        end;
+      end;
+      (* Recheck if file still to small *)
       if MyFileSize < MyCalcSize then
       begin
         RunDecInfo.Items.Add('File to small, aborting.');
@@ -2510,11 +2512,20 @@ begin
         FrmMediaInfo.MyUpdate;
         Exit;
       end;
-      (* Determine if we have (a) extra Pattern table(s) *)
-      a := MyFileSize - MyCalcSize;
-      RunDecInfo.Items.Add('File to big, skipping pre-sampledata surplus space.');
-      (* 'Dump' the pre-sampledata surplus at the end of our Patterns tables: it does not do any harm there. *)
-      MyTotalPatternSize := MyTotalPatternSize + a;
+      (* Recheck for filesize error *)
+      if MyFileSize = MyCalcSize then
+        RunDecInfo.Items.Add('Corrected total filesize OK.')
+      else
+      begin
+        (* File is too big *)
+        a := MyFileSize - MyCalcSize;
+        if MyCorr <> 0 then
+          RunDecInfo.Items.Add('Corrected total filesize to large, skipping pre-sampledata surplus space (' + IntToStr(a) + ').')
+        else
+          RunDecInfo.Items.Add('File to large, skipping pre-sampledata surplus space (' + IntToStr(a) + ').');
+        (* 'Dump' the pre-sampledata surplus at the end of our Patterns tables: it does not do any harm there. *)
+        MyTotalPatternSize := MyTotalPatternSize + a;
+      end;
     end;
 
     (* Load our pattern data (#Channels * 4 (= entry size) * 64 (= entries) * (= #Patterns) *)
