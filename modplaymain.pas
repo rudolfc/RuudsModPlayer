@@ -117,6 +117,7 @@ Type
     OldVibSpeed,
     OldVibDepth,
     MyArpeggio,
+    MyFinePorta,
     MyCutNote,
     MyDelayNote,
     MyPatDelayNr,
@@ -650,6 +651,7 @@ begin
         MySmpSkipLen := 0;
         (* No Porta active *)
         MyPortaSpeed := 0;
+        MyFinePorta := 0;
         (* No PortaTo active *)
         MyPortaToSpeed := 0;
         OldPortaToSpeed := 0;
@@ -900,6 +902,8 @@ begin
       (* Reset/stop Porta up/down on every new note (!) *)
       MyPortaSpeed := 0;  (* effect stop *)
       MyPrtaPerPart := 0; (* engine reset *)
+      (* Reset/stop Fine Porta up/down also *)
+      MyFinePorta := 0;
       (* We must keep PortaTo going if it was running before even if we have a new note! *)
       if (PatDecode.EffectNumber <> 3) and (PatDecode.EffectNumber <> 5) then
       begin
@@ -950,18 +954,10 @@ begin
     if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
     begin
       if (PatDecode.EffectParam shr 4) = 1 then (* cmd: effect Fine Porta Up *)
-      begin
-        //fixme: add Fine Porta Up
-        RunDecInfo.Items.Add('Warning: Fine Porta Up not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
+        Dec(MyFinePorta, PatDecode.EffectParam and $0f);
 
       if (PatDecode.EffectParam shr 4) = 2 then (* cmd: effect Fine Porta Down *)
-      begin
-        //fixme: add Fine Porta Down
-        RunDecInfo.Items.Add('Warning: Fine Porta Down not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
+        Inc(MyFinePorta, PatDecode.EffectParam and $0f);
 
       if (PatDecode.EffectParam shr 4) = 3 then (* cmd: effect Glissando Control *)
       begin
@@ -1432,6 +1428,7 @@ begin
     MyVolSlide := 0;
     (* kill Porta *)
     MyPortaSpeed := 0;
+    MyFinePorta := 0;
     (* kill PortaTo *)
     MyPortaToSpeed := 0;
     OldPortaToSpeed := 0;
@@ -1812,8 +1809,13 @@ begin
     (* Amigaspeed not found in table means no sound. *)
     exit;
   end;
-  (* now apply sample's finetune setting and fetch finetuned AmigaSpeed. *)
+  (* now apply sample's finetune setting and fetch finetuned AmigaSpeed.. *)
   Result := MyPeriodTable[MyFineTune, MyTabIdx];
+  (* ..correct with (possible) effect Fine Porta up/down.. *)
+  Result := Result + MySongLogic[MyCh].MyFinePorta;
+  (* ..and keep result within the boundaries of our PeriodTable. *)
+  if Result < 108 then Result := 108; (* B3 + finepitch +7 *)
+  if Result > 907 then Result := 907; (* C1 + FinePitch -8 *)
 
   if CBPatDebug.Checked and not MyAppClosing then
   begin
@@ -1900,13 +1902,15 @@ begin
     (* Reset/stop Porta up/down *)
     MyPortaSpeed := 0;  (* effect stop *)
     MyPrtaPerPart := 0; (* engine reset *)
+    (* Reset Fine Porta up/down *)
+    MyFinePorta := 0;
     (* Reset/stop Porta-to *)
     MyPortaToSpeed := 0;  (* effect stop *)
     MyPrtaToPerPart := 0; (* engine reset *)
     (* No Arpeggio active *)
     MyArpeggio := 0; (* effect stop/engine reset *)
 
-    //fixme: kill Tremolo
+    //fixme: kill Tremolo etc
 
     (* Restore Volume to 'default' since a sample is specified *)
     MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
