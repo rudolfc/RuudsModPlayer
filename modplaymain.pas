@@ -107,6 +107,7 @@ Type
     MyOldSkipLen,
     MyVolSlide,
     MyVolume,
+    OldVolume,
     MyPortaSpeed,
     MyPortaToSpeed,
     OldPortaToSpeed,
@@ -116,6 +117,10 @@ Type
     MyVibDepth,
     OldVibSpeed,
     OldVibDepth,
+    MyTremSpeed,
+    MyTremDepth,
+    OldTremSpeed,
+    OldTremDepth,
     MyArpeggio,
     MyFinePorta,
     MyCutNote,
@@ -138,7 +143,8 @@ Type
     MyInBufCnt,
     MyPrtaPerPart,
     MyPrtaToPerPart,
-    MyVibratoPos    : Integer;
+    MyVibratoPos,
+    MyTremoloPos    : Integer;
     LastInSample,
     InSmpUpRemain   : Single;
     MySmpTCnt,
@@ -376,7 +382,7 @@ begin
   if Cmd11 and Cmd13 then
   begin
     //fixme: complete 11 and 13 on same row!
-    RunDecInfo.Items.Add('--> ''Pos Jump''&''Pat break'' not yet done, please contact Rudolf with this song''s author and title..');
+    RunDecInfo.Items.Add('Warning: ''Pos Jump''&''Pat break'' combined not yet implemented!');
     RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
   end;
 
@@ -646,6 +652,7 @@ begin
         MyVolSlide := 0;
         (* start at Max volume *)
         MyVolume := 64;
+        OldVolume := 64;
         (* Trigger samples normally *)
         RetrigEvery := 0;
         MySmpSkipLen := 0;
@@ -661,6 +668,11 @@ begin
         MyVibDepth := 0;
         OldVibSpeed := 0;
         OldVibDepth := 0;
+        (* No Tremolo active *)
+        MyTremSpeed := 0;
+        MyTremDepth := 0;
+        OldTremSpeed := 0;
+        OldTremDepth := 0;
         (* No Arpeggio active *)
         MyArpeggio := 0;
         (* No Cutnote active *)
@@ -686,6 +698,7 @@ begin
         MyPrtaPerPart := 0;
         MyPrtaToPerPart := 0;
         MyVibratoPos := 0;
+        MyTremoloPos := 0;
         MyOldInPerPart := -1;
         (* Our 'previous buffer's last sample' is zero (we are not connected there since we are just starting a new song!) *)
         LastInSample := 0;
@@ -856,7 +869,7 @@ begin
       if (PatDecode.EffectParam and $f0 = 0) or (PatDecode.EffectParam and $0f = 0) then
       begin
         // Fixme: .. let slide up take precedence?
-        if PatDecode.EffectParam and $f0 <> 0 then
+        if PatDecode.EffectParam and $f0 <> 0 then   //slide up
           MyVolSlide := PatDecode.EffectParam shr 4
         else
           if PatDecode.EffectParam and $0f <> 0 then //slide down
@@ -886,10 +899,17 @@ begin
     end;
 
     (* Only restore Volume to 'default' if a sample is specified *)
-    if NewInstr then MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
+    if NewInstr then
+    begin
+      MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
+      OldVolume := MyVolume;
+    end;
 
     if PatDecode.EffectNumber = 12 then (* cmd: effect Set Volume (0..64) *)
+    begin
       MyVolume := PatDecode.EffectParam;
+      OldVolume := MyVolume;
+    end;
   end;
 end;
 
@@ -976,9 +996,9 @@ begin
     if NewInstr then
     begin
       (* Reset/stop Vibrato on -every new note- (!) *)
-      MyVibSpeed := 0;    (* effect stop *)
-      MyVibDepth := 0;    (* effect stop *)
-      MyVibratoPos := 0;  (* engine reset *)
+      MyVibSpeed := 0;   (* effect stop *)
+      MyVibDepth := 0;   (* effect stop *)
+      MyVibratoPos := 0; (* engine reset *)
     end;
 
     if PatDecode.EffectNumber = 4 then   (* cmd: effect Vibrato *)
@@ -1038,15 +1058,34 @@ begin
   end;
 end;
 
-procedure DoTremoloUpdate;
+procedure DoTremoloUpdate(NewInstr, NewNote: Boolean);
 begin
-  with MySongLogic[MyCh] do
+  with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
+    if NewInstr then
+    begin
+      (* Reset/stop Tremolo on -every new note- (!) *)
+      MyTremSpeed := 0;  (* effect stop *)
+      MyTremDepth := 0;  (* effect stop *)
+      MyTremoloPos := 0; (* engine reset *)
+    end;
+
     if PatDecode.EffectNumber = 7 then
     begin
-      //fixme: add Tremolo
-      RunDecInfo.Items.Add('Warning: Tremolo not yet implemented!');
-      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      if (PatDecode.EffectParam and $f0 <> 0) and (PatDecode.EffectParam and $0f <> 0) then
+      begin
+        MyTremSpeed := PatDecode.EffectParam shr 4;
+        OldTremSpeed := MyTremSpeed;
+        MyTremDepth := PatDecode.EffectParam and $0f;
+        OldTremDepth := MyTremDepth;
+      end
+      else
+      begin
+        MyTremSpeed := OldTremSpeed;
+        MyTremDepth := OldTremDepth;
+      end;
+      (* We need the Volume at the start of the effect to exec the effect correctly *)
+      OldVolume := MyVolume;
     end;
 
     if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
@@ -1153,7 +1192,7 @@ begin
         DoPortaParamUpdate(False, False); (* all Porta effects *)
         DoVibParamUpdate(False, False);   (* all Vibrato effects *)
         DoArpeggioUpdate;                 (* all Arpeggio effects *)
-        DoTremoloUpdate;                  (* all Tremolo effects *)
+        DoTremoloUpdate(False, False);    (* all Tremolo effects *)
         DoVolParamUpdate(False, False);   (* all Volume effects *)
 
         (* We must repeat the previous sample since we don't have one now *)
@@ -1257,7 +1296,7 @@ begin
             RetrigSample := False;
           DoVibParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Vibrato effects *)
           DoArpeggioUpdate;                                  (* all Arpeggio effects *)
-          DoTremoloUpdate;                                   (* all Tremolo effects *)
+          DoTremoloUpdate(MyDelayNote < 0, RetrigSample);    (* all Tremolo effects *)
           DoVolParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Volume effects *)
 
           (* If we have no period we need to use the last one issued earlier *)
@@ -1299,7 +1338,7 @@ begin
               RetrigSample := False;
             DoVibParamUpdate(False, RetrigSample);   (* all Vibrato effects *)
             DoArpeggioUpdate;                        (* all Arpeggio effects *)
-            DoTremoloUpdate;                         (* all Tremolo effects *)
+            DoTremoloUpdate(False, RetrigSample);    (* all Tremolo effects *)
             DoVolParamUpdate(False, RetrigSample);   (* all Volume effects *)
 
             (* We must repeat the previous sample since we don't have one now *)
@@ -1424,6 +1463,7 @@ begin
   begin
     (* set max volume.. *)
     MyVolume := 64;
+    OldVolume := 64;
     (* ..not with sliding volume, but fixed *)
     MyVolSlide := 0;
     (* kill Porta *)
@@ -1438,6 +1478,11 @@ begin
     MyVibDepth := 0;
     OldVibSpeed := 0;
     OldVibDepth := 0;
+    (* No Tremolo active *)
+    MyTremSpeed := 0;
+    MyTremDepth := 0;
+    OldTremSpeed := 0;
+    OldTremDepth := 0;
     (* No Arpeggio active *)
     MyArpeggio := 0;
     (* No Cutnote active *)
@@ -1463,6 +1508,7 @@ begin
     MyPrtaPerPart := 0;
     MyPrtaToPerPart := 0;
     MyVibratoPos := 0;
+    MyTremoloPos := 0;
     MyOldInPerPart := -1;
     (* start at sample start *)
     MyInBufCnt := -1;
@@ -1782,7 +1828,8 @@ var
   MyFullBufLen,
   FineTuneIdx,
   OutCnt, i    : Integer;
-  MyVibDelta   : Single;
+  MyVibDelta,
+  MyTremDelta  : Single;
   MySample1,
   MySample2,
   MyTmpSample,
@@ -1859,6 +1906,8 @@ begin
     SmpVibUpCnt := MyInSmpUp;
     (* Vibrato is 'centered' (zero) *)
     MyVibratoPos := 0;
+    (* Tremolo is 'centered' (zero) *)
+    MyTremoloPos := 0;
   end;
 end;
 
@@ -1899,6 +1948,10 @@ begin
     MyVibSpeed := 0;   (* effect stop *)
     MyVibDepth := 0;   (* effect stop *)
     MyVibratoPos := 0; (* engine reset *)
+    (* Reset/stop Tremolo since we have a new instrument *)
+    MyTremSpeed := 0;  (* effect stop *)
+    MyTremDepth := 0;  (* effect stop *)
+    MyTremoloPos := 0; (* engine reset *)
     (* Reset/stop Porta up/down *)
     MyPortaSpeed := 0;  (* effect stop *)
     MyPrtaPerPart := 0; (* engine reset *)
@@ -1910,10 +1963,11 @@ begin
     (* No Arpeggio active *)
     MyArpeggio := 0; (* effect stop/engine reset *)
 
-    //fixme: kill Tremolo etc
+    //fixme: kill all running effects that are added to the player..
 
     (* Restore Volume to 'default' since a sample is specified *)
     MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
+    OldVolume := MyVolume;
 
     (* determine the location and length of our current new sample to play *)
     MySmpOffset := 0;
@@ -1949,14 +2003,14 @@ begin
       Inc(MyTickCnt);
       if MyTickCnt < TickSpeed then
       begin
-        (* If we need to execute a Delayed Note do it now *)
+        (* do 'Delay Note' effect *)
         if MyDelayNote = MyTickCnt then
         begin
           StartDelayedNote;
           (* We must set a new target input sample.. (the last done sample (#1) is still the same of course) *)
           MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64;
         end;
-        (* If we need to retrigger a running note do it now *)
+        (* do 'Retrigger Note' effect *)
         if (RetrigEvery > 0) and ((MyTickCnt mod RetrigEvery) = 0) then
         begin
           (* Reset input to first sample (We might skip first part of sample buffer though) *)
@@ -1964,16 +2018,20 @@ begin
           (* We must set a new target input sample.. (the last done sample (#1) is still the same of course) *)
           MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64;
         end;
-        (* get sinusoidal value from position.. *)
-        // Fixme: We should add the other possible waveforms.. (Effect E4x: Set Vibrato Waveform)
-        MyVibDelta := MySineTable[MyVibratoPos and $1f];
-        if MyVibratoPos < 0 then MyVibDelta := -MyVibDelta;
-        (* get amplitude and combine to get absolute frequency modifier.. *)
-        MyVibDelta := (MyVibDelta * MyVibDepth) / 128;
-        (* rotate through sinetable.. *)
-        MyVibratoPos := MyVibratoPos + MyVibSpeed;
-        if MyVibratoPos > 31 then MyVibratoPos := MyVibratoPos - 64;
-        (* do arpeggio effect.. *)
+        (* do 'Vibrato' effect *)
+        if MyVibSpeed <> 0 then
+        begin
+          (* get sinusoidal value from position.. *)
+          // Fixme: We should add the other possible waveforms.. (Effect E4x: Set Vibrato Waveform)
+          MyVibDelta := MySineTable[MyVibratoPos and $1f];
+          if MyVibratoPos < 0 then MyVibDelta := -MyVibDelta;
+          (* get amplitude and combine to get absolute frequency modifier.. *)
+          MyVibDelta := (MyVibDelta * MyVibDepth) / 128;
+          (* rotate through sinetable.. *)
+          MyVibratoPos := MyVibratoPos + MyVibSpeed;
+          if MyVibratoPos > 31 then MyVibratoPos := MyVibratoPos - 64;
+        end;
+        (* do 'Arpeggio' effect *)
         if MyArpeggio <> 0 then
         begin
           case MyTickCnt mod 3 of
@@ -1982,7 +2040,7 @@ begin
             2: MyInPerPart := MyPeriodTable[FineTune, Min(FineTuneIdx + (MyArpeggio and $0f) shr 0, 36)];
           end;
         end;
-        (* do porta-to-note effect as well.. *)
+        (* do 'Porta to Note' effect *)
         if MyPortaToSpeed <> 0 then
         begin
           MyCurPeriod := Round(MyInPerPart + MyPrtaToPerPart + MyPrtaPerPart + MyVibDelta);
@@ -2001,13 +2059,36 @@ begin
               MyPrtaToPerPart := MyPrtaToPerPart + (MyPortaToGoal - MyCurPeriod);
           end;
         end;
-        (* do porta effect as well.. *)
+        (* do 'Porta' effect *)
         MyPrtaPerPart := MyPrtaPerPart + MyPortaSpeed;
-        (* keep effects in range.. *)
+
+        (* keep above effects in frequency range *)
         if (MyPrtaPerPart + MyPrtaToPerPart + MyInPerPart + MyVibDelta) > 856 then    (* lowest  note at pitch 0: C1 *)
           MyPrtaPerPart := Round(856 - (MyPrtaToPerPart + MyInPerPart + MyVibDelta));
         if (MyPrtaPerPart + MyPrtaToPerPart + MyInPerPart + MyVibDelta) < 113 then    (* highest note at pitch 0: B3 *)
           MyPrtaPerPart := Round(113 - (MyPrtaToPerPart + MyInPerPart + MyVibDelta));
+
+        (* do effects 'Volume slide' and 'Cut Note' *)
+        UpdateMyVolSlide(MyCh, MyTickCnt);
+
+        (* do 'Tremolo' effect *)
+        if MyTremSpeed <> 0 then
+        begin
+          (* get sinusoidal value from position.. *)
+          // Fixme: We should add the other possible waveforms.. (Effect E7x: Set Tremolo Waveform)
+          MyTremDelta := MySineTable[MyTremoloPos and $1f];
+          if MyTremoloPos < 0 then MyTremDelta := -MyTremDelta;
+          (* get effect amplitude and combine to get absolute volume modifier.. *)
+          MyTremDelta := (MyTremDelta * MyTremDepth) / 64;
+          (* rotate through sinetable.. *)
+          MyTremoloPos := MyTremoloPos + MyTremSpeed;
+          if MyTremoloPos > 31 then MyTremoloPos := MyTremoloPos - 64;
+          (* Adjust our volume while keeping it in the valid range. *)
+          MyVolume := Round(OldVolume + MyTremDelta);
+          if MyVolume > 64 then MyVolume := 64;
+          if MyVolume <  0 then MyVolume :=  0;
+        end;
+
         (* finally calculate new upsampling factor *)
         MyInSmpUp :=
           MPSettings.MySettings.OutSampleRate * 2 * (MyInPerPart + MyPrtaPerPart + MyPrtaToPerPart + MyVibDelta) /
@@ -2019,8 +2100,6 @@ begin
         (* Correct our Tick counter if needed *)
         MyIncFactor := Trunc(SmpVibUpCnt) - Trunc(OldSmpVibUpCnt);
         Inc(MySmpTCnt, MyIncFactor);
-        (* We also update our 'Tick' volume here! *)
-        UpdateMyVolSlide(MyCh, MyTickCnt);
       end;
     end;
   end;
@@ -2072,6 +2151,9 @@ begin
       (* Vibrato is 'centered' (zero) _only_ at new sample start! *)
       // Fixme: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or not)
       MyVibratoPos := 0;
+      (* Tremolo is 'centered' (zero) _only_ at new sample start! *)
+      // Fixme: depends on Effect E7x: Set Tremolo Waveform! (retrig at Tick0 or not)
+      MyTremoloPos := 0;
       (* Cancel possible buffer interconnection data as we do a 'fresh start' *)
       MyConBufFill := 0;
     end;
@@ -2158,7 +2240,7 @@ begin
       MyConBufFill := OutCnt - MyOutBufLen;
       if MyConBufFill > MyConBufSize then
       begin
-        RunDecInfo.Items.Add('WARNING: Connection buffer too small! (Need ' + IntToStr(MyConBufFill) + ' samples)');
+        RunDecInfo.Items.Add('Warning: Connection buffer too small! (Need ' + IntToStr(MyConBufFill) + ' samples)');
         MyConBufFill := MyConBufSize;
       end;
       for i := 0 to MyConBufFill - 1 do
@@ -2438,7 +2520,7 @@ begin
         if OrigFormatFile and (Length > 9999) then
         begin
           (* 'Officially' the original format only supports samples upto/excluding 10000 bytes (or a few less even, unclear!) *)
-          RunDecInfo.Items.Add('WARNING: Sample size to big (> 9999 bytes)');
+          RunDecInfo.Items.Add('Warning: Sample size to big (> 9999 bytes)');
         end;
         (* range -8..+7, two's complement! *)
         FFineTune := ShortInt(Byte(FFineTune) << 4) div 16;
