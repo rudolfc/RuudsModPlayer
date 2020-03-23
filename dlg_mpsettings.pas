@@ -116,8 +116,10 @@ procedure TMPSettings.ResetSettings;
 begin
   with MySettings do
   begin
-    MyTVSpeed     := NTSCSpeed;              (* NTSC is the most often used speed (Xtal reference for TV output) globally speaking *)
-    OutSampleRate := 44100;                  (* we use CD quality output (44.1kHz @ 16bit, two channels *)
+    (* PAL is the most often used speed (Xtal ref. for TV output) looking at the sales figures for Amiga computers globally *)
+    MyTVSpeed     := PALSpeed;
+    (* we use CD quality output (44.1kHz @ 16bit, two channels *)
+    OutSampleRate := 44100;
   end;
 end;
 
