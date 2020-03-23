@@ -8,9 +8,7 @@ Note please that the documentation is very helpfull, but does not cover all the 
 testing/comparing/trying different 'tweaks' to the player going on as much files as is possible.
 
 My initial sound files used are those from Pinball Dreams and Pinball Fantasies. These files run
-all OK now (except for missing Arpeggio effect, I'll add that of course..)
-
-Have fun with this stuff!
+all OK now.
 
 
 Interesting internet resources for fileformat / player logic information:
@@ -21,10 +19,49 @@ http://fileformats.archiveteam.org/wiki/Amiga_Module
 https://wiki.multimedia.cx/index.php?title=Protracker_Module#Axy
 
 
+Also I looked at a few other modplayers outthere:
+
+JavaMod:
+http://www.javamod.de/
+
+OpenMPT:
+https://openmpt.org/
+
+The latter also has a nice effect reference online:
+https://wiki.openmpt.org/Manual:_Effect_Reference
+
+Also they have some testing MODs available:
+https://wiki.openmpt.org/Development:_Test_Cases/MOD
+
+
+About the testing MODs:
+I am not pursuing to get these testing files to work 'properly' per se. My goal with the player is
+not to be max. compatible with other players outthere. Instead I am interested in trying to adhere
+to the descriptions of the effects, and have most MODs play OK: kind of a mix in between. Including
+errors because other players have them, is therefore not a goal. Instead, I try to prevent such
+errors. Though I am aware I am probably creating some errors of my own in the meantime.. ;-)
+
+Another goal is to keep a small codebase, while also not using external libraries. Expanding the
+player to also be able to play newer types module files (see openMPT) is not on the wishlist per se,
+since I'd like to keep things simple as stated above.
+
+
+About PAL/NTSC:
+Since module files depend upon the right speed when running to sound right (no distortions) I was
+searching the net to see if the PAL/NTSC choice would be encoded in the MOD files. Unfortunately
+this seems not to be the case. Since the Amiga computers were sold primarily in Europe (much
+less so in America), PAL is the best default 'speed' to use: not NTSC. Of course the user can
+manually switch between the two on the fly..
+
+
+For sales figures see:
+http://www.amigahistory.plus.com/sales.html
+
+
+Have fun with this stuff!
+
+
+
 Rudolf Cornelissen.
 
-File last edited on 2020-02-13.
-
-
-
-
+File last edited on 2020-03-23.
