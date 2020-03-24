@@ -1373,7 +1373,7 @@ begin
 
             DoRetrigParamUpdate;                     (* all Retrigger effects *)
             (* DoRetrigParamUpdate 'DelayNote' influences the remaining effects *)
-            if MyDelayNote < 0 then
+            if (MyDelayNote < 0) and not MyPatDelaying then
               RetrigSample := HasNote
             else
               RetrigSample := False;

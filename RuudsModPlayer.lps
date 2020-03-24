@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="1217"/>
-        <CursorPos X="4" Y="1243"/>
+        <TopLine Value="355"/>
+        <CursorPos X="42" Y="465"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -82,7 +82,7 @@
         <WindowIndex Value="-1"/>
         <TopLine Value="94"/>
         <CursorPos X="91" Y="119"/>
-        <UsageCount Value="162"/>
+        <UsageCount Value="166"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
@@ -91,7 +91,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1112"/>
         <CursorPos X="2" Y="1140"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit7>
       <Unit8>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32wscontrols.pp"/>
@@ -142,14 +142,14 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="697"/>
         <CursorPos X="11" Y="713"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit14>
       <Unit15>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32listsl.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="121"/>
         <CursorPos Y="137"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit15>
       <Unit16>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\packages\fcl-base\src\fptimer.pp"/>
@@ -187,7 +187,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="799"/>
         <CursorPos Y="820"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit20>
       <Unit21>
@@ -195,7 +195,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="670"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit21>
       <Unit22>
@@ -203,7 +203,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="687"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit22>
       <Unit23>
@@ -211,7 +211,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="786"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit23>
       <Unit24>
@@ -219,7 +219,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="783"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit24>
       <Unit25>
@@ -275,14 +275,14 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="237"/>
         <CursorPos X="13" Y="241"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit31>
       <Unit32>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\inc\text.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="162"/>
         <CursorPos X="32" Y="179"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit32>
       <Unit33>
         <Filename Value="C:\Users\RudolfC\AppData\Local\Temp\7zO87A4E967\modplaymain.pas"/>
