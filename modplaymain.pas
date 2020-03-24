@@ -222,6 +222,7 @@ Type
     MyWaveFile     : FILE;
     MyWaveHeader   : TWavHeader;
     MyOpenInFile   : String;
+    MyJmpBreak     : Integer;
 
     (* the longest buffer getting used is @ 32PBM = 78mS * 31 ticks = 2418mS * Samples/sec. *)
     MyChBuf      : Array[1..MaxNumChBufs, 0..  (1*78*31*MaxSampleRate div 1000)] of SmallInt; (* mono channel output buffers *)
@@ -231,7 +232,7 @@ Type
     procedure ExecTick(Sender: TObject);
     procedure UpdateMyVolSlide(MyCh, MyTick: Integer);
     //procedure SetMyVolSliderMax;
-    procedure ExecNote(MyCh: Integer);
+    function  ExecNote(MyCh: Integer): Boolean;
 
 
   public
@@ -281,6 +282,7 @@ var
   Ch       : Integer;
   S        : String;
   DoUpdate : Boolean;
+  MyResult : Boolean;
 BEGIN
   if MySongPaused or StoppingMySong or MyAppClosing then exit;
   (* make sure we don't overtake ourselves *)
@@ -315,12 +317,20 @@ BEGIN
 
   (* Process all channels *)
   ParseSpeedControl;
-  For Ch := 1 to MyMediaRec.Channels do ExecNote(Ch);
-  MixAndOutputSamples(False);
-  ParseRunControl;
+  (* Note: The 'forward' playing order of channels is important (in case of multiple jump/break cmd's in one row) *)
+  For Ch := 1 to MyMediaRec.Channels do
+  begin
+    MyResult := ExecNote(Ch);
+    if not MyResult then break;
+  end;
+  if MyResult then
+  begin
+    MixAndOutputSamples(False);
+    ParseRunControl;
+  end;
 
   (* If we reached the end of the song let the currently queued buffers play out *)
-  if StoppingMySong then
+  if StoppingMySong or not MyResult then
     while not AllBufsDone do sleep(5);
 
   (* We're done (note: 'StopPlaying' stops the timer again) *)
@@ -379,15 +389,10 @@ begin
       if PatDecode.EffectNumber = 13 then Cmd13 := True;
     end;
   end;
-  if Cmd11 and Cmd13 then
-  begin
-    //fixme: complete 11 and 13 on same row!
-    RunDecInfo.Items.Add('Warning: ''Pos Jump''&''Pat break'' combined not yet implemented!');
-    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-  end;
 
   ChSongDone := 0;
-  for ChIn := 1 to MyMediaRec.Channels do
+  (* Scan for commands in reverse order since the one issued on the highest channel has priority *)
+  for ChIn := MyMediaRec.Channels downto 1 do
     with MySongLogic[ChIn] do
     begin
       (* When a channel reaches the end of a pattern table advance all channels to the next one (in the song or ending) *)
@@ -419,6 +424,13 @@ begin
           (* No Pattern Loop active *)
           MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
+          (* We explicitly only execute 'the most recent' command: kill all others. *)
+          if (ChOut <> ChIn) and
+             ((MySongLogic[ChOut].PatDecode.EffectNumber = 11) or (MySongLogic[ChOut].PatDecode.EffectNumber = 13)) then
+          begin
+            MySongLogic[ChOut].PatDecode.EffectNumber := 0;
+            MySongLogic[ChOut].PatDecode.EffectParam  := 0;
+          end;
         end;
       end;
       (* Copy 'Pattern break' cmd results to all channels *)
@@ -436,6 +448,13 @@ begin
           (* No Pattern Loop active *)
           MySongLogic[ChOut].MyPatLoopPos := -1;
           MySongLogic[ChOut].MyPatLoopNr := 0;
+          (* We explicitly only execute 'the most recent' (coupled) command: kill all others. *)
+          if (ChOut <> ChIn) and
+             ((MySongLogic[ChOut].PatDecode.EffectNumber = 11) or (MySongLogic[ChOut].PatDecode.EffectNumber = 13)) then
+          begin
+            MySongLogic[ChOut].PatDecode.EffectNumber := 0;
+            MySongLogic[ChOut].PatDecode.EffectParam  := 0;
+          end;
         end;
       end;
       (* Copy 'Pattern Delay' cmd results to all channels (they need to process it as well) *)
@@ -445,6 +464,21 @@ begin
         begin
           MySongLogic[ChOut].MyPatDelayNr  := MyPatDelayNr;
           MySongLogic[ChOut].MyPatDelaying := MyPatDelaying;
+          MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
+          MySongLogic[ChOut].MyPatbreak      := MyPatbreak;
+          MySongLogic[ChOut].MyPatTabPos     := MyPatTabPos;
+          MySongLogic[ChOut].MySongPos       := MySongPos;
+          MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
+          MySongLogic[ChOut].MySongEnding    := MySongEnding;
+          MySongLogic[ChOut].MySongDone      := MySongDone;
+
+          (* We explicitly only execute 'the most recent' command: kill all others. *)
+          if (ChOut <> ChIn) and
+             ((MySongLogic[ChOut].PatDecode.EffectNumber = 14) and ((MySongLogic[ChOut].PatDecode.EffectParam shr 4) = $e)) then
+          begin
+            MySongLogic[ChOut].PatDecode.EffectNumber := 0;
+            MySongLogic[ChOut].PatDecode.EffectParam  := 0;
+          end;
         end;
       end;
       (* Check for/signal song end: Wait for all channels to finish their songs *)
@@ -625,6 +659,9 @@ begin
     StoppingMySong := False;
     if CBSongDebug.Checked or CBPatDebug.Checked then RunDecInfo.Items.Clear;
 
+    (* No Pattern Jump occurred *)
+    MyJmpBreak := -1;
+
     for Cnt := 1 to 4 do
     begin
       (* Song player logic reset *)
@@ -759,7 +796,7 @@ begin
   (* Please note: we don't touch the application's volume slider, let the user do that. We simply mix the audio to volume.. *)
 end;
 
-procedure TModMain.ExecNote(MyCh: Integer);
+function TModMain.ExecNote(MyCh: Integer): Boolean;
 var
   d, MyShowPos : Integer;
   HasNote,
@@ -786,8 +823,9 @@ begin
         begin
           (* We might actually execute the delayed note: so save it.. *)
           MyDelayPattern := PatDecode;
-          (* .. and for now keep running the previous effects *)
+          (* .. and for now keep running the previous effects. *)
           PatDecode := MyOldPattern;
+          (* Note: If the old effect is a jump and the delayed note is never executed the jump will occur. *)
         end;
       end;
     end;
@@ -1157,6 +1195,9 @@ end;
 
 
 begin
+  (* Preset OK status *)
+  result := True;
+
   (* Walk through song *)
   with MySongLogic[MyCh] do
   begin
@@ -1202,14 +1243,16 @@ begin
 
         (* We don't retrigger the running note since we are finishing up! *)
         RetrigSample := False;
-        if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
+        Result := PlayCurrentSample(RetrigSample, MySmpSkipLen);
+        if not Result then exit;
       end
       else
       begin
         (* This input channel is done *)
         MySongDone := True;
         (* Play silence buffer *)
-        if not PlayEmptySample(MyCh) then exit;
+        Result := PlayEmptySample(MyCh);
+        if not Result then exit;
       end;
       Exit;
     end;
@@ -1237,15 +1280,16 @@ begin
       if (MyPatTabPos <= 63) and not StoppingMySong then
       begin
         MyPatTabRunning := True;
-        PatDecode := DecodePattern(MyPatternPtr[(MyCh-1)+
-                    (MyPatTabPos*MyMediaRec.Channels)+
-                    (MyPatTabNr*MyMediaRec.Channels*64)], True);
 
         (* Always show the table position we are actually playing *)
         if MyPatDelaying then
           MyShowPos := MyPatTabPos - 1
         else
           MyShowPos := MyPatTabPos;
+
+        PatDecode := DecodePattern(MyPatternPtr[(MyCh-1)+
+                    (MyShowPos *MyMediaRec.Channels)+
+                    (MyPatTabNr*MyMediaRec.Channels*64)], True);
 
         if CBPatDebug.Checked then
         begin
@@ -1303,7 +1347,8 @@ begin
           if not HasNote then PatDecode.SamplePeriod := MyOldPattern.SamplePeriod;
 
           (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
-          if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
+          Result := PlayCurrentSample(RetrigSample, MySmpSkipLen);
+          if not Result then exit;
 
           (* Remember what we did as we might have to repeat (part of) it.. *)
           MyOldPattern := PatDecode;
@@ -1347,7 +1392,8 @@ begin
             if not HasNote then PatDecode.SamplePeriod := MyOldPattern.SamplePeriod;
 
             (* Normally we retrigger each new note, but if PortaTo or DelayNote active we keep playing the old note *)
-            if not PlayCurrentSample(RetrigSample, MySmpSkipLen) then exit;
+            Result := PlayCurrentSample(RetrigSample, MySmpSkipLen);
+            if not Result then exit;
 
             (* Remember what we did as we might have to repeat (part of) it.. *)
             MyOldPattern := PatDecode;
@@ -1355,7 +1401,8 @@ begin
           else
           begin
             (* Play silence buffer (nothing to do) *)
-            if not PlayEmptySample(MyCh) then exit;
+            Result := PlayEmptySample(MyCh);
+            if not Result then exit;
           end;
         end;
 
@@ -1379,27 +1426,35 @@ begin
           MyPatLoopNr := 0;
         end;
 
-        (* check for pattern jumps to see if we should deviate.. *)
-        if PatDecode.EffectNumber = 13 then
+
+        (* check for pattern break or -jump to see if we should deviate.. *)
+
+        if PatDecode.EffectNumber = 13 then (* effect 'Pattern Break' *)
         begin
-          (* we must jump to another pattern in the next pattern table being nr b4-7 * 10 + b0-3 (so BCD!) *)
+          (* we must jump to another row in the next pattern table being nr b4-7 * 10 + b0-3 (so BCD!) *)
           MyPatTabPos := (PatDecode.EffectParam shr 4) * 10 + (PatDecode.EffectParam and $0f);
           if MyPatTabPos > 63 then MyPatTabPos := 0;
           MyPatbreak := True;
           (* Exiting current table *)
           MyPatTabRunning := False;
         end;
-        if PatDecode.EffectNumber = 11 then
+
+        (* If we are the first channel (in the row) preset no 'Pattern Jump' effect was encountered yet. *)
+        if MyCh = 1 then MyJmpBreak := -1;
+        if PatDecode.EffectNumber = 11 then (* effect 'Pattern Jump' *)
         begin
           (* Do no fail-safe check on MySongPos here as it's catched below! (overflow might be used to signal song end..) *)
           if PatDecode.EffectParam = MySongPos then
           begin
-            (* Not explicitly documented, but seems very correct! *)
+            (* Not documented, but seems correct (patch): But only if we are -not- combined with effect 'Pattern Break' (13) *)
             Inc(MySongPos);
           end
           else
             MySongPos := PatDecode.EffectParam;
 
+          (* Remember where we're going globally in case effect 'Pattern Break' will occur in the same row *)
+          (* Note: We exclude 'patch' Inc(MySongPos) from above here since selecting the same SongPos doesn't mean we'll loop now *)
+          MyJmpBreak := PatDecode.EffectParam;
           (* Exiting current table *)
           MyPatTabRunning := False;
         end;
@@ -1407,7 +1462,11 @@ begin
 
       if not MyPatTabRunning then
       begin
+        (* Normally always increment song position at the end of a table, unless the new one is specified directly.. *)
         if PatDecode.EffectNumber <> 11 then inc(MySongPos);
+        (* .. or indirectly. *)
+        if (PatDecode.EffectNumber = 13) and (MyJmpBreak >= 0) then MySongPos := MyJmpBreak;
+
         (* Fail-safe to not read outside the song patterns array! *)
         if MySongPos >= MyFileHeader.SongLength then
         begin
@@ -1459,6 +1518,10 @@ begin
   (* mute non-used channels to be sure *)
   For Ch := 1 to MaxNumChBufs do
     MySongLogic[Ch].MyVolume := 0;
+
+  (* No Pattern Jump occurred *)
+  MyJmpBreak := -1;
+
   with MySongLogic[1] do
   begin
     (* set max volume.. *)

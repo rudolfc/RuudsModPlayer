@@ -20,7 +20,7 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MinorVersionNr Value="7"/>
-      <RevisionNr Value="6"/>
+      <RevisionNr Value="7"/>
       <BuildNr Value="1"/>
     </VersionInfo>
     <BuildModes Count="1">

@@ -2090,7 +2090,7 @@ set it to the first order.
   be set to -1, so it is 1 less than 0, then as the tick handler adds 1 to
   the row it is set to 0 again, and nothing is wrong.
 
-* See Section 4.6 on using pattern jump and pattern break on the same row.
+* See Section 4.2 on using pattern jump and pattern break on the same row.
   You should set a flag to say there has been a pattern jump, so if there
   is a pattern break on the same row, the pattern break effect will not
   increment the order.  I know its strange but it is a protracker feature.
