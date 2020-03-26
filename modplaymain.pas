@@ -1464,8 +1464,15 @@ begin
       begin
         (* Normally always increment song position at the end of a table, unless the new one is specified directly.. *)
         if PatDecode.EffectNumber <> 11 then inc(MySongPos);
-        (* .. or indirectly. *)
-        if (PatDecode.EffectNumber = 13) and (MyJmpBreak >= 0) then MySongPos := MyJmpBreak;
+        (* .. or indirectly.. *)
+        if (PatDecode.EffectNumber = 13) then
+        begin
+          if MyJmpBreak >= 0 then
+            MySongPos := MyJmpBreak
+          else (* .. or by convention (See openMPT). *)
+            if MySongPos >= MyFileHeader.SongLength then
+              MySongPos := 0;
+        end;
 
         (* Fail-safe to not read outside the song patterns array! *)
         if MySongPos >= MyFileHeader.SongLength then

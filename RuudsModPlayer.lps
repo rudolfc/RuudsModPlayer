@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="355"/>
-        <CursorPos X="42" Y="465"/>
+        <TopLine Value="1451"/>
+        <CursorPos Y="1476"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -82,7 +82,7 @@
         <WindowIndex Value="-1"/>
         <TopLine Value="94"/>
         <CursorPos X="91" Y="119"/>
-        <UsageCount Value="166"/>
+        <UsageCount Value="167"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
