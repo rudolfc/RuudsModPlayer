@@ -395,22 +395,32 @@ begin
   for ChIn := MyMediaRec.Channels downto 1 do
     with MySongLogic[ChIn] do
     begin
-      (* When a channel reaches the end of a pattern table advance all channels to the next one (in the song or ending) *)
-      (* Note: without this provision Pattern Loops will mess things up big time.. *)
-      if ((MyPatTabPos > 63) or (MySongPos >= MyFileHeader.SongLength)) and not Cmd11 and not Cmd13 then
+      //yeah:
+      (* Copy 'Pattern Loop' cmd results to all channels *)
+      if (PatDecode.EffectNumber = 14) and ((PatDecode.EffectParam shr 4) = 6) then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
         begin
+          MySongLogic[ChOut].MyPatLoopPos  := MyPatLoopPos;
+          MySongLogic[ChOut].MyPatLoopNr   := MyPatLoopNr;
           MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
+          MySongLogic[ChOut].MyPatbreak      := MyPatbreak;
+          MySongLogic[ChOut].MyPatTabPos     := MyPatTabPos;
           MySongLogic[ChOut].MySongPos       := MySongPos;
           MySongLogic[ChOut].MyPatTabNr      := MyPatTabNr;
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
-          (* No Pattern Loop active *)
-          MySongLogic[ChOut].MyPatLoopPos := -1;
-          MySongLogic[ChOut].MyPatLoopNr := 0;
+
+          (* We explicitly only execute 'the most recent' command: kill all others. *)
+          if (ChOut <> ChIn) and
+             ((MySongLogic[ChOut].PatDecode.EffectNumber = 14) and ((MySongLogic[ChOut].PatDecode.EffectParam shr 4) = 6)) then
+          begin
+            MySongLogic[ChOut].PatDecode.EffectNumber := 0;
+            MySongLogic[ChOut].PatDecode.EffectParam  := 0;
+          end;
         end;
       end;
+
       (* Copy 'Position Jump' cmd results to all channels *)
       if PatDecode.EffectNumber = 11 then
       begin
@@ -721,7 +731,7 @@ begin
         MyPatDelayNr := 0;
         MyPatDelaying := False;
         (* No Pattern Loop active *)
-        MyPatLoopPos := -1;
+        MyPatLoopPos := 0;
         MyPatLoopNr := 0;
         (* We are _starting_ a song *)
         MySongEnding := False;
@@ -849,27 +859,35 @@ begin
       if (PatDecode.EffectParam shr 4) = 9 then (* cmd: effect Retrigger note every x ticks *)
         RetrigEvery := PatDecode.EffectParam and $0f;
 
-      if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)
+      if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)     //yeah
       begin
-        (* Note: I have the feeling this item is used sometimes while writing a song:
-                 MyParam = 0: Start position to jump back to;
-                 MyParam = 1: We run the sequence once, so we -don't- loop back;
-                 MyParam > 1: We loop (MyParam-1) times, so we play it (MyParam) times. *)
         MyParam := PatDecode.EffectParam and $0f;
         if MyParam = 0 then            (* Note current row as starting position for the loop *)
-          MyPatLoopPos := MyPatTabPos
+        begin
+          MyPatLoopPos := MyPatTabPos;
+          RunDecInfo.Items.Add('>>> Pat loop: Setting start position: '+inttostr(MyPatLoopPos));
+          RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+        end
         else
         begin
           if MyPatLoopNr = 0 then      (* Note number of loops to make *)
+          begin
             MyPatLoopNr := MyParam;
-          (* Note: Always decrement MyPatLoopNr! (not only if MyPatLoopNr <> 0) *)
-          Dec(MyPatLoopNr);            (* Update loop counter *)
+            RunDecInfo.Items.Add('>>> Pat loop: Set nr of loops to make: '+inttostr(MyPatLoopNr));
+            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+          end
+          else
+            Dec(MyPatLoopNr);          (* Update loop counter *)
           if MyPatLoopNr > 0 then      (* Initiate next loop if we're not done looping yet *)
           begin
-            if MyPatLoopPos >= 0 then
-              MyPatTabPos := MyPatLoopPos - 1 (* We increment again later so we restart correctly. *)
-            else
-              Dec(MyPatTabPos);               (* We increment again later so we restart correctly (same row). *)
+            MyPatTabPos := MyPatLoopPos - 1; (* We increment again later so we restart correctly. *)
+            RunDecInfo.Items.Add('>>> Pat loop: Jumping back, jumps to go: '+inttostr(MyPatLoopNr - 1));
+            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+          end
+          else
+          begin
+            RunDecInfo.Items.Add('>>> Pat loop: Done, continuing pat table walk.');
+            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
           end;
         end;
       end;
@@ -1421,7 +1439,7 @@ begin
           (* Exiting current table *)
           MyPatTabRunning := False;
           (* No Pattern Loop active (always reset when going to the next table) *)
-          MyPatLoopPos := -1;
+          MyPatLoopPos := 0;
           MyPatLoopNr := 0;
         end;
 
@@ -1562,7 +1580,7 @@ begin
     MyPatDelayNr := 0;
     MyPatDelaying := False;
     (* No Pattern Loop active *)
-    MyPatLoopPos := -1;
+    MyPatLoopPos := 0;
     MyPatLoopNr := 0;
     (* Trigger samples normally *)
     RetrigEvery := 0;

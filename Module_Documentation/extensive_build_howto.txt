@@ -2455,6 +2455,9 @@ case 0x6: if (eparmy == 0) patlooprow[track] = row;   // store pos if param=0
 Remember you keep seperate patlooprow/patloopno variables for EACH channel,
 NOT just 1 of each for the whole song.
 
+>>>Ruud: Also beware that though you need to keep data seperate per channel,
+         executing jumps is always -global-, so works for ALL channels.
+
 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿        UPDATED:
 ³ °±² 5.23 Effect E7x (Set Tremolo WaveForm) ²±° ³ T0? [Y] : INBETWEEN? [N]
 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
