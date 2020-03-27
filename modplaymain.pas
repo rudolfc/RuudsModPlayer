@@ -731,7 +731,7 @@ begin
         MyPatDelayNr := 0;
         MyPatDelaying := False;
         (* No Pattern Loop active *)
-        MyPatLoopPos := 0;
+        MyPatLoopPos := -1;
         MyPatLoopNr := 0;
         (* We are _starting_ a song *)
         MySongEnding := False;
@@ -880,7 +880,11 @@ begin
             Dec(MyPatLoopNr);          (* Update loop counter *)
           if MyPatLoopNr > 0 then      (* Initiate next loop if we're not done looping yet *)
           begin
-            MyPatTabPos := MyPatLoopPos - 1; (* We increment again later so we restart correctly. *)
+            if MyPatLoopPos >= 0 then
+              MyPatTabPos := MyPatLoopPos - 1 (* We increment again later so we restart correctly. *)
+            else
+              Dec(MyPatTabPos);               (* No start position was set, repeat only the current row. *)
+
             RunDecInfo.Items.Add('>>> Pat loop: Jumping back, jumps to go: '+inttostr(MyPatLoopNr - 1));
             RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
           end
@@ -1439,7 +1443,7 @@ begin
           (* Exiting current table *)
           MyPatTabRunning := False;
           (* No Pattern Loop active (always reset when going to the next table) *)
-          MyPatLoopPos := 0;
+          MyPatLoopPos := -1;
           MyPatLoopNr := 0;
         end;
 
@@ -1580,7 +1584,7 @@ begin
     MyPatDelayNr := 0;
     MyPatDelaying := False;
     (* No Pattern Loop active *)
-    MyPatLoopPos := 0;
+    MyPatLoopPos := -1;
     MyPatLoopNr := 0;
     (* Trigger samples normally *)
     RetrigEvery := 0;
