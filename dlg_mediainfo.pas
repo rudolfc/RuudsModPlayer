@@ -100,6 +100,8 @@ begin
   BtSaveInfo.Enabled  := False;
   BitBtn1.Enabled     := False;
   CbDmpTables.Enabled := False;
+  (* Clear MediaInfo *)
+  ListBox1.Items.Clear;
 
   with MyFileHeader do
   begin

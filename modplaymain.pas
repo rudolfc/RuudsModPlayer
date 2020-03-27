@@ -903,10 +903,9 @@ begin
        (PatDecode.EffectNumber = 5) or   (* cmd: effect Porta to Note + Volume slide *)
        (PatDecode.EffectNumber = 6) then (* cmd: effect Vibrato + Volume slide *)
     begin
-      // Fixme: Only do something if one is zero or..
+      (* Only exec command if we have just -one- direction *)
       if (PatDecode.EffectParam and $f0 = 0) or (PatDecode.EffectParam and $0f = 0) then
       begin
-        // Fixme: .. let slide up take precedence?
         if PatDecode.EffectParam and $f0 <> 0 then   //slide up
           MyVolSlide := PatDecode.EffectParam shr 4
         else
@@ -1465,7 +1464,7 @@ begin
         (* Normally always increment song position at the end of a table, unless the new one is specified directly.. *)
         if PatDecode.EffectNumber <> 11 then inc(MySongPos);
         (* .. or indirectly.. *)
-        if (PatDecode.EffectNumber = 13) then
+        if PatDecode.EffectNumber = 13 then
         begin
           if MyJmpBreak >= 0 then
             MySongPos := MyJmpBreak
