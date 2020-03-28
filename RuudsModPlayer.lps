@@ -9,7 +9,7 @@
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <CursorPos Y="20"/>
+        <CursorPos X="18" Y="19"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="867"/>
-        <CursorPos X="8" Y="887"/>
+        <TopLine Value="800"/>
+        <CursorPos X="29" Y="821"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -83,7 +83,7 @@
         <WindowIndex Value="-1"/>
         <TopLine Value="94"/>
         <CursorPos X="91" Y="119"/>
-        <UsageCount Value="175"/>
+        <UsageCount Value="177"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>

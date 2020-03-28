@@ -158,6 +158,7 @@ Type
 
   TModMain = class(TForm)
     CBPatDebug: TCheckBox;
+    CBCmdDebug: TCheckBox;
     CBSaveWave: TCheckBox;
     Ch1On: TCheckBox;
     Ch2On: TCheckBox;
@@ -395,14 +396,12 @@ begin
   for ChIn := MyMediaRec.Channels downto 1 do
     with MySongLogic[ChIn] do
     begin
-      //yeah:
-      (* Copy 'Pattern Loop' cmd results to all channels *)
+      (* Copy 'Pattern Loop' cmd -jump- results to all channels *)
       if (PatDecode.EffectNumber = 14) and ((PatDecode.EffectParam shr 4) = 6) then
       begin
         for ChOut := 1 to MyMediaRec.Channels do
         begin
-          MySongLogic[ChOut].MyPatLoopPos  := MyPatLoopPos;
-          MySongLogic[ChOut].MyPatLoopNr   := MyPatLoopNr;
+          (* Note: No -not- copy 'MyPatLoopPos' and 'MyPatLoopNr' since these are needed -per channel- (for nested loops) *)
           MySongLogic[ChOut].MyPatTabRunning := MyPatTabRunning;
           MySongLogic[ChOut].MyPatbreak      := MyPatbreak;
           MySongLogic[ChOut].MyPatTabPos     := MyPatTabPos;
@@ -411,7 +410,9 @@ begin
           MySongLogic[ChOut].MySongEnding    := MySongEnding;
           MySongLogic[ChOut].MySongDone      := MySongDone;
 
-          (* We explicitly only execute 'the most recent' command: kill all others. *)
+          (* We explicitly only execute 'the most recent' -jump- command: kill all others. *)
+          (* Note: Since 'ParseRunControl' is executed -after- each channel processed its commands,
+             'ParseRunControl' in fact corrects already done channel-internal jumps on lower channels. *)
           if (ChOut <> ChIn) and
              ((MySongLogic[ChOut].PatDecode.EffectNumber = 14) and ((MySongLogic[ChOut].PatDecode.EffectParam shr 4) = 6)) then
           begin
@@ -813,6 +814,14 @@ var
   RetrigSample : Boolean;
   S            : String;
 
+procedure DebugString(MyText: String);
+begin
+  if CBCmdDebug.Checked then
+  begin
+    RunDecInfo.Items.Add('>> ' + MyText);
+    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+  end;
+end;
 
 procedure DoRetrigParamUpdate;
 var
@@ -859,40 +868,33 @@ begin
       if (PatDecode.EffectParam shr 4) = 9 then (* cmd: effect Retrigger note every x ticks *)
         RetrigEvery := PatDecode.EffectParam and $0f;
 
-      if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)     //yeah
+      if (PatDecode.EffectParam shr 4) = 6 then (* cmd: effect Pattern Loop *)
       begin
         MyParam := PatDecode.EffectParam and $0f;
         if MyParam = 0 then            (* Note current row as starting position for the loop *)
         begin
           MyPatLoopPos := MyPatTabPos;
-          RunDecInfo.Items.Add('>>> Pat loop: Setting start position: '+inttostr(MyPatLoopPos));
-          RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+          DebugString('Pat loop ch' + IntToStr(MyCh) + ': Setting start position: '+inttostr(MyPatLoopPos));
         end
         else
         begin
           if MyPatLoopNr = 0 then      (* Note number of loops to make *)
           begin
             MyPatLoopNr := MyParam;
-            RunDecInfo.Items.Add('>>> Pat loop: Set nr of loops to make: '+inttostr(MyPatLoopNr));
-            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+            DebugString('Pat loop ch' + IntToStr(MyCh) + ': Set nr of loops to make: '+inttostr(MyPatLoopNr));
           end
           else
             Dec(MyPatLoopNr);          (* Update loop counter *)
           if MyPatLoopNr > 0 then      (* Initiate next loop if we're not done looping yet *)
           begin
+            DebugString('Pat loop ch' + IntToStr(MyCh) + ': Jumping back, jumps to go: '+inttostr(MyPatLoopNr - 1));
             if MyPatLoopPos >= 0 then
               MyPatTabPos := MyPatLoopPos - 1 (* We increment again later so we restart correctly. *)
             else
               Dec(MyPatTabPos);               (* No start position was set, repeat only the current row. *)
-
-            RunDecInfo.Items.Add('>>> Pat loop: Jumping back, jumps to go: '+inttostr(MyPatLoopNr - 1));
-            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
           end
           else
-          begin
-            RunDecInfo.Items.Add('>>> Pat loop: Done, continuing pat table walk.');
-            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-          end;
+            DebugString('Pat loop ch' + IntToStr(MyCh) + ': Done, continuing pat table walk.');
         end;
       end;
 

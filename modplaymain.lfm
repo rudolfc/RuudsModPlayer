@@ -15,7 +15,7 @@ object ModMain: TModMain
   LCLVersion = '2.0.7.0'
   object BtnPlaySong: TBitBtn
     Left = 8
-    Height = 30
+    Height = 28
     Top = 383
     Width = 72
     Anchors = [akLeft, akBottom]
@@ -25,7 +25,7 @@ object ModMain: TModMain
   end
   object BtnPlayRaw: TBitBtn
     Left = 492
-    Height = 30
+    Height = 28
     Top = 383
     Width = 72
     Anchors = [akRight, akBottom]
@@ -46,7 +46,7 @@ object ModMain: TModMain
   end
   object BtnStopSong: TBitBtn
     Left = 88
-    Height = 30
+    Height = 28
     Top = 383
     Width = 72
     Anchors = [akLeft, akBottom]
@@ -57,7 +57,7 @@ object ModMain: TModMain
   object CBSample: TComboBox
     Left = 572
     Height = 23
-    Top = 390
+    Top = 388
     Width = 56
     Anchors = [akRight, akBottom]
     ItemHeight = 15
@@ -66,7 +66,7 @@ object ModMain: TModMain
   object CbRepeat: TCheckBox
     Left = 540
     Height = 19
-    Top = 420
+    Top = 418
     Width = 88
     Anchors = [akRight, akBottom]
     Caption = 'Loop sample'
@@ -82,9 +82,9 @@ object ModMain: TModMain
     TabOrder = 6
   end
   object SongStartPos: TEdit
-    Left = 88
+    Left = 96
     Height = 23
-    Top = 432
+    Top = 414
     Width = 64
     Anchors = [akLeft, akBottom]
     OnEditingDone = SongStartPosEditingDone
@@ -94,14 +94,14 @@ object ModMain: TModMain
   object Label1: TLabel
     Left = 8
     Height = 15
-    Top = 440
+    Top = 416
     Width = 78
     Anchors = [akLeft, akBottom]
     Caption = 'Song start pos:'
     ParentColor = False
   end
   object CBSaveWave: TCheckBox
-    Left = 168
+    Left = 8
     Height = 19
     Top = 436
     Width = 91
@@ -172,6 +172,15 @@ object ModMain: TModMain
     Checked = True
     State = cbChecked
     TabOrder = 14
+  end
+  object CBCmdDebug: TCheckBox
+    Left = 168
+    Height = 19
+    Top = 436
+    Width = 83
+    Anchors = [akLeft, akBottom]
+    Caption = 'Cmd debug'
+    TabOrder = 15
   end
   object MainMenu1: TMainMenu
     Left = 96

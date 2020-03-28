@@ -2456,7 +2456,9 @@ Remember you keep seperate patlooprow/patloopno variables for EACH channel,
 NOT just 1 of each for the whole song.
 
 >>>Ruud: Also beware that though you need to keep data seperate per channel,
-         executing jumps is always -global-, so works for ALL channels.
+         executing jumps is always -global-: so works for ALL channels.
+		 This way nested loops are possible upto/incl. the number of channels
+		 present in a file: Try i.e. 'ode2ptk.mod' for that. Excellent example!
 
 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿        UPDATED:
 ³ °±² 5.23 Effect E7x (Set Tremolo WaveForm) ²±° ³ T0? [Y] : INBETWEEN? [N]
