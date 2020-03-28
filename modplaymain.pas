@@ -232,7 +232,6 @@ Type
 
     procedure ExecTick(Sender: TObject);
     procedure UpdateMyVolSlide(MyCh, MyTick: Integer);
-    //procedure SetMyVolSliderMax;
     function  ExecNote(MyCh: Integer): Boolean;
 
 
@@ -245,9 +244,8 @@ Type
     function  LoadFile(MyFile: String): Boolean;
     procedure StopPlaying;
     function  MixAndOutputSamples(PlayRaw: Boolean): Boolean;
-    function  PlaySample(MyCh: Integer;
-      MySmpPtr: PInt8; MyBufLen, MyFirstStart, MyRptLen, MyRptStart: Integer; AmigaSpeed: Word; FineTune: ShortInt): Boolean;
-    function  PlayEmptySample(MyCh: Integer): Boolean;
+    function  PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
+                         MyRptLen: Integer = 0; MyRptStart: Integer = 0; AmigaSpeed: Word = 428; FineTune: ShortInt = 0): Boolean;
     Function  AllBufsDone: Boolean;
     procedure OpenWaveOutput;
     procedure CloseWaveOutput;
@@ -1274,7 +1272,7 @@ begin
         (* This input channel is done *)
         MySongDone := True;
         (* Play silence buffer *)
-        Result := PlayEmptySample(MyCh);
+        Result := PlaySample(MyCh, nil);
         if not Result then exit;
       end;
       Exit;
@@ -1424,7 +1422,7 @@ begin
           else
           begin
             (* Play silence buffer (nothing to do) *)
-            Result := PlayEmptySample(MyCh);
+            Result := PlaySample(MyCh, nil);
             if not Result then exit;
           end;
         end;
@@ -1914,8 +1912,8 @@ begin
   MyStat := waveOutUnPrepareHeader(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
 end;
 
-function TModMain.PlaySample(MyCh: Integer;
-  MySmpPtr: PInt8; MyBufLen, MyFirstStart, MyRptLen, MyRptStart: Integer; AmigaSpeed: Word; FineTune: ShortInt): Boolean;
+function TModMain.PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
+                             MyRptLen: Integer = 0; MyRptStart: Integer = 0; AmigaSpeed: Word = 428; FineTune: ShortInt = 0): Boolean;
 var
   MyInPerPart,
   MyFullBufLen,
@@ -2026,6 +2024,7 @@ begin
     if MyNewInPeriod < 0 then exit;
 
     (* So we have a go.. *)
+
     (* Remember our now ending Pattern as we might have to repeat (part of) it.. *)
     MyOldPattern := PatDecode;
     (* Make the Delayed Pattern our current Pattern *)
@@ -2101,7 +2100,10 @@ begin
         begin
           StartDelayedNote;
           (* We must set a new target input sample.. (the last done sample (#1) is still the same of course) *)
-          MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64;
+          if MySmpPtr <> nil then
+            MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64
+          else
+            MySample2 := 0;
         end;
         (* do 'Retrigger Note' effect *)
         if (RetrigEvery > 0) and ((MyTickCnt mod RetrigEvery) = 0) then
@@ -2109,7 +2111,10 @@ begin
           (* Reset input to first sample (We might skip first part of sample buffer though) *)
           MyInBufCnt := MyFirstStart;
           (* We must set a new target input sample.. (the last done sample (#1) is still the same of course) *)
-          MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64;
+          if MySmpPtr <> nil then
+            MySample2 := (MySmpPtr[MyInBufCnt] shl 8) * MyVolume / 64
+          else
+            MySample2 := 0;
         end;
         (* do 'Vibrato' effect *)
         if MyVibSpeed <> 0 then
@@ -2200,6 +2205,31 @@ end;
 
 begin
   Result := True;
+
+  if (MySmpPtr = nil) then
+  begin
+    if CBPatDebug.Checked and not MyAppClosing then
+    begin
+      S := '';
+      if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
+      RunDecInfo.Items.Add(S + 'Playing empty buffer (silence)');
+      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+    end;
+
+    (* Setup to play interconnect + silence. No new sounds to generate, so: *)
+    (* Reset engine *)
+    MySampleLogic[MyCh].MyInBufCnt := -1;
+    (* Find AmigaSpeed in our default (non-finepitched) notes lookup table *)
+    MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
+    (* Abort on fail(!) *)
+    if (MyInPerPart < 0) then
+    begin
+      RunDecInfo.Items.Add('>>> ERROR <<< (Illegal AmigaSpeed specified, cannot play silence buffer)');
+      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      exit;
+    end;
+  end;
+
   (* In case of looping samples we need to check against the full sample length at the moment
       such a repeat starts. Important if they loop more than once within -one- output buffer! *)
   MyFullBufLen := MyBufLen;
@@ -2207,22 +2237,25 @@ begin
   (* We keep track of our locally 'generated' ticks *)
   MyTickCnt := 0;
 
-  with MySongLogic[MyCh], MySampleLogic[MyCh] do
+  if MySmpPtr <> nil then
   begin
-    (* Find AmigaSpeed in our default (non-finepitched) notes lookup table *)
-    MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
-    (* -Only- if effect PortaTo is running we need to keep being based on the old period value.. *)
-    if MyPortaToSpeed <> 0 then MyInPerPart := MyOldInPerPart;
-    (* .. so remember the current period value in use. *)
-    MyOldInPerPart := MyInPerPart;
-  end;
+    with MySongLogic[MyCh], MySampleLogic[MyCh] do
+    begin
+      (* Find AmigaSpeed in our default (non-finepitched) notes lookup table *)
+      MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
+      (* -Only- if effect PortaTo is running we need to keep being based on the old period value.. *)
+      if MyPortaToSpeed <> 0 then MyInPerPart := MyOldInPerPart;
+      (* .. so remember the current period value in use. *)
+      MyOldInPerPart := MyInPerPart;
+    end;
 
-  (* Amigaspeed not found in table means no sound; Only play really existing samples *)
-  if (MyInPerPart < 0) or (MyBufLen <= 2) then
-  begin
-    (* Play empty buffer and exit. *)
-    Result := PlayEmptySample(MyCh);
-    exit;
+    (* Amigaspeed not found in table means no sound; Only play really existing samples *)
+    if (MyInPerPart < 0) or (MyBufLen <= 2) then
+    begin
+      (* Play empty buffer and exit. *)
+      Result := PlaySample(MyCh, nil);
+      exit;
+    end;
   end;
 
   (* calculate initial (coarse) up-sample rate *)
@@ -2248,7 +2281,7 @@ begin
       // Fixme: depends on Effect E7x: Set Tremolo Waveform! (retrig at Tick0 or not)
       MyTremoloPos := 0;
       (* Cancel possible buffer interconnection data as we do a 'fresh start' *)
-      MyConBufFill := 0;
+      if MySmpPtr <> nil then MyConBufFill := 0;
     end;
 
     (* We determine our output buffer size per note: tick-time * nr-ticks-per-note *)
@@ -2278,13 +2311,18 @@ begin
          - In case if a new songstart we preset the previous sample to zero. *)
       MySample1 := LastInSample;
 
-      if MyInBufCnt+1 < MyBufLen then
-        MySample2 := (MySmpPtr[MyInBufCnt+1] shl 8) * MyVolume / 64
-      else
-        if MyRptLen > 2 then
-          MySample2 := (MySmpPtr[MyRptStart] shl 8) * MyVolume / 64
+      if MySmpPtr <> nil then
+      begin
+        if MyInBufCnt+1 < MyBufLen then
+          MySample2 := (MySmpPtr[MyInBufCnt+1] shl 8) * MyVolume / 64
         else
-          MySample2 := 0;
+          if MyRptLen > 2 then
+            MySample2 := (MySmpPtr[MyRptStart] shl 8) * MyVolume / 64
+          else
+            MySample2 := 0;
+      end
+      else
+        MySample2 := 0;
 
       (* We need to end/correct for the previous unfinished sample in time and amplitude first *)
       SmpVibUpCnt := SmpVibUpCnt - (1-InSmpUpRemain);
@@ -2325,86 +2363,34 @@ begin
     end;
   end;
 
-  (* If we overfilled our output buffer transfer it to the next runner-up... *)
-  (* Please note that this makes a possible new volume setting in the next round vary max. a single input sample in time.. *)
-  with MySampleLogic[MyCh] do
-    if OutCnt > MyOutBufLen then
-    begin
-      MyConBufFill := OutCnt - MyOutBufLen;
-      if MyConBufFill > MyConBufSize then
-      begin
-        RunDecInfo.Items.Add('Warning: Connection buffer too small! (Need ' + IntToStr(MyConBufFill) + ' samples)');
-        MyConBufFill := MyConBufSize;
-      end;
-      for i := 0 to MyConBufFill - 1 do
-        MyConBufContent[i] := MyChBuf[MyCh][MyOutBufLen + i];
-    end
-    else
-      MyConBufFill := 0;
-end;
-
-//fixme: we should still check if a Delayed Note should be started.. (?)
-function TModMain.PlayEmptySample(MyCh: Integer): Boolean;
-var
-  OutCnt, i    : Integer;
-  MyTmpSample,
-  MySampleStep : Single;
-  Up           : Single;
-  S            : String;
-begin
-  Result := True;
-
-  if CBPatDebug.Checked and not MyAppClosing then
+  if MySmpPtr <> nil then
   begin
-    S := '';
-    if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
-    RunDecInfo.Items.Add(S + 'Playing empty buffer (silence)');
-    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-  end;
-
-  with MySampleLogic[MyCh] do
-  begin
-    (* We determine our output buffer size per note: tick-time * nr-ticks-per-note *)
-    MyOutBufLen := Round(TmrInterval * TickSpeed * MPSettings.MySettings.OutSampleRate / 1000);
-    (* We have no period available: simulate it (using 4) as we need to slowly fallback from current DC-level to zero *)
-    Up := 4;
-
-    (* First place still pending data from the previous buffer in our output buffer (if any) *)
-    for i := 0 to MyConBufFill - 1 do
-      MyChBuf[MyCh][i] := MyConBufContent[i];
-    (* setup (rest as) empty output buffer (silence) *)
-    OutCnt := MyConBufFill;
-    while OutCnt < MyOutBufLen do
-    begin
-      if Up <> 0 then (* We need to fallback to zero level only once.. *)
+    (* If we overfilled our output buffer transfer it to the next runner-up... *)
+    (* Please note that this makes a possible new volume setting in the next round vary max. a single input sample in time.. *)
+    with MySampleLogic[MyCh] do
+      if OutCnt > MyOutBufLen then
       begin
-        (* Determine the upsampling value step per resulting full sample *)
-        MySampleStep := (0 - LastInSample) / Up;
-        (* We need to end/correct for the previous unfinished sample in time and amplitude first *)
-        Up := Up - (1-InSmpUpRemain);
-        (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
-        MyTmpSample := LastInSample + MySampleStep * (1-InSmpUpRemain);
-        MyChBuf[MyCh][OutCnt] := Round(MyTmpSample);
-        Inc(OutCnt);
-        (* gradually fall-back to zero level.. *)
-        While (Up >= 1.0) do
+        MyConBufFill := OutCnt - MyOutBufLen;
+        if MyConBufFill > MyConBufSize then
         begin
-          MyTmpSample := MyTmpSample + MySampleStep;
-          MyChBuf[MyCh][OutCnt] := Round(MyTmpSample);
-          Up := Up - 1;
-          Inc(OutCnt);
+          RunDecInfo.Items.Add('Warning: Connection buffer too small! (Need ' + IntToStr(MyConBufFill) + ' samples)');
+          MyConBufFill := MyConBufSize;
         end;
-        Up := 0;
-      end;
-      (* setup rest of output buffer to silence *)
-      MyChBuf[MyCh][OutCnt] := 0;
-      Inc(OutCnt);
+        for i := 0 to MyConBufFill - 1 do
+          MyConBufContent[i] := MyChBuf[MyCh][MyOutBufLen + i];
+      end
+      else
+        MyConBufFill := 0;
+  end
+  else
+  begin
+    with MySampleLogic[MyCh] do
+    begin
+      (* Update our last newly fetched buffer value for the next buffer to zero as that's what we did play last *)
+      LastInSample := 0;
+      (* Connection buffer is empty *)
+      MyConBufFill := 0;
     end;
-
-    (* Update our last newly fetched buffer value for the next buffer to zero as that's what we did play last *)
-    LastInSample := 0;
-    (* Connection buffer is empty *)
-    MyConBufFill := 0;
   end;
 end;
 

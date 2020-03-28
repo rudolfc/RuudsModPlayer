@@ -186,7 +186,7 @@ begin
               begin
                 //MyMediaRec.Channels * 4 * 64 * IgnSetNrOfPats
                 PatDecode := DecodePattern(MyPatternPtr[c+(b*MyMediaRec.Channels)+(a*MyMediaRec.Channels*64)], False);
-                if PatDecode.SampleNumber > 31 then  Add('>>>>>>>>>>>>>>>>>>>>> ERROR <<<<<<<<<<<<<<<<<<<');
+                if PatDecode.SampleNumber > MyMediaRec.MaxSamples then  Add('>>> ERROR <<< (Illegal SampleNumber specified)');
 
                 S := S + ' ch ' + IntToStr(c+1) +
                      ' = Sn:' + ByteToHexString(PatDecode.SampleNumber) +
