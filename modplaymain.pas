@@ -1244,8 +1244,12 @@ begin
         MySmpOffset := MyOldOffset;
         MySmpLength := MyOldLength;
 
-        (* Note: don't exec any retrigger command anymore: we want to -end-.. *)
-        if (PatDecode.EffectNumber = 9) or (PatDecode.EffectNumber = 14) then
+        (* Note: don't exec any retrigger or loop command anymore: we want to -end-.. *)
+        if (PatDecode.EffectNumber = 9) or ((PatDecode.EffectNumber = 14) and (* Sample Offset *)
+         (((PatDecode.EffectParam shr 4) =  6) or                             (* Pattern Loop *)
+          ((PatDecode.EffectParam shr 4) =  9) or                             (* Retrig Note *)
+          ((PatDecode.EffectParam shr 4) = $d) or                             (* Delay Note *)
+          ((PatDecode.EffectParam shr 4) = $e))) then                         (* Pattern Delay *)
         begin
           PatDecode.EffectNumber := 0;
           PatDecode.EffectParam := 0;
@@ -1955,14 +1959,15 @@ begin
   if Result < 108 then Result := 108; (* B3 + finepitch +7 *)
   if Result > 907 then Result := 907; (* C1 + FinePitch -8 *)
 
-  if CBPatDebug.Checked and not MyAppClosing then
-  begin
-    S := '';
-    if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
-    RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(MyTabIdx) +
-      ', Finetune: ' + IntToStr(MyFineTune) + ', Outspeed: ' + inttostr(Result));
-    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-  end;
+  if (MySmpPtr <> nil) then (* info has no meaning when playing silence *)
+    if CBPatDebug.Checked and not MyAppClosing then
+    begin
+      S := '';
+      if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
+      RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(MyTabIdx) +
+        ', Finetune: ' + IntToStr(MyFineTune) + ', Outspeed: ' + inttostr(Result));
+      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+    end;
 end;
 
 
@@ -2206,7 +2211,7 @@ end;
 begin
   Result := True;
 
-  if (MySmpPtr = nil) then
+  if MySmpPtr = nil then
   begin
     if CBPatDebug.Checked and not MyAppClosing then
     begin
@@ -2216,13 +2221,10 @@ begin
       RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
     end;
 
-    (* Setup to play interconnect + silence. No new sounds to generate, so: *)
-    (* Reset engine *)
-    MySampleLogic[MyCh].MyInBufCnt := -1;
     (* Find AmigaSpeed in our default (non-finepitched) notes lookup table *)
     MyInPerPart := AmigaSpeedChk(AmigaSpeed, FineTune, FineTuneIdx);
     (* Abort on fail(!) *)
-    if (MyInPerPart < 0) then
+    if MyInPerPart < 0 then
     begin
       RunDecInfo.Items.Add('>>> ERROR <<< (Illegal AmigaSpeed specified, cannot play silence buffer)');
       RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
@@ -2263,25 +2265,40 @@ begin
 
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
-    (* new sample starting: point to first buffer position *)
-    if MyInBufCnt < 0 then
+    if MySmpPtr <> nil then
     begin
-      (* We might skip first part of sample upon start *)
-      (* Please note: 'value-1' below is used because of inter-new-sample-data-connection requirement! *)
-      MyInBufCnt := MyFirstStart - 1;
-      (* Setup neutral since on tick0 of a new sample ChkDoPortaVibrato should not be executed *)
-      MyInSmpUp := Up; // Fixme for Vibrato: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or no)
+      (* new sample starting: point to first buffer position *)
+      if MyInBufCnt < 0 then
+      begin
+        (* We might skip first part of sample upon start *)
+        (* Please note: 'value-1' below is used because of inter-new-sample-data-connection requirement! *)
+        MyInBufCnt := MyFirstStart - 1;
+        (* Setup neutral since on tick0 of a new sample ChkDoPortaVibrato should not be executed *)
+        MyInSmpUp := Up; // Fixme for Vibrato: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or no)
+        SmpVibUpCnt := MyInSmpUp;
+        (* Reset our internal Tick Counter *)
+        MySmpTCnt := 0;
+        (* Vibrato is 'centered' (zero) _only_ at new sample start! *)
+        // Fixme: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or not)
+        MyVibratoPos := 0;
+        (* Tremolo is 'centered' (zero) _only_ at new sample start! *)
+        // Fixme: depends on Effect E7x: Set Tremolo Waveform! (retrig at Tick0 or not)
+        MyTremoloPos := 0;
+        (* Cancel possible buffer interconnection data as we do a 'fresh start' *)
+        MyConBufFill := 0;
+      end;
+    end
+    else
+    begin
+      (* playing silence: setup neutral and don't touch buffers *)
+      MyInSmpUp := Up;
       SmpVibUpCnt := MyInSmpUp;
       (* Reset our internal Tick Counter *)
       MySmpTCnt := 0;
-      (* Vibrato is 'centered' (zero) _only_ at new sample start! *)
-      // Fixme: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or not)
+      (* Vibrato is 'centered' (zero) *)
       MyVibratoPos := 0;
-      (* Tremolo is 'centered' (zero) _only_ at new sample start! *)
-      // Fixme: depends on Effect E7x: Set Tremolo Waveform! (retrig at Tick0 or not)
+      (* Tremolo is 'centered' (zero) *)
       MyTremoloPos := 0;
-      (* Cancel possible buffer interconnection data as we do a 'fresh start' *)
-      if MySmpPtr <> nil then MyConBufFill := 0;
     end;
 
     (* We determine our output buffer size per note: tick-time * nr-ticks-per-note *)
