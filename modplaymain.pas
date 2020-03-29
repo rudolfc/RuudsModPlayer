@@ -365,6 +365,9 @@ begin
             TmrInterval := 5000 / (PatDecode.EffectParam * 2)
           else
             TickSpeed := PatDecode.EffectParam;
+
+          (* We don't accept coming to a full stop in sample processing *)
+          if TickSpeed = 0 then Inc(TickSpeed);
         end;
       end;
     end;
