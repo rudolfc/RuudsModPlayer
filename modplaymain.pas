@@ -378,20 +378,7 @@ procedure TModMain.ParseRunControl;
 var
   ChOut, Chin,
   ChSongDone   : Integer;
-  Cmd11, Cmd13 : Boolean;
 begin
-  Cmd11 := False;
-  Cmd13 := False;
-
-  for ChIn := 1 to MyMediaRec.Channels do
-  begin
-    with MySongLogic[ChIn] do
-    begin
-      if PatDecode.EffectNumber = 11 then Cmd11 := True;
-      if PatDecode.EffectNumber = 13 then Cmd13 := True;
-    end;
-  end;
-
   ChSongDone := 0;
   (* Scan for commands in reverse order since the one issued on the highest channel has priority *)
   for ChIn := MyMediaRec.Channels downto 1 do
