@@ -15,6 +15,8 @@ begin
 
   (* Open Soundcard output *)
   ModMain.OpenWaveOutput;
+  (* If we were started by File Association then load and play the file *)
+  ModMain.OpenAssociatedFile;
 
   Application.Run;
 end.

@@ -8,9 +8,8 @@
       <Unit0>
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <CursorPos Y="20"/>
+        <CursorPos X="15" Y="17"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
@@ -21,9 +20,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="ModPlayMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="419"/>
-        <CursorPos Y="382"/>
+        <TopLine Value="657"/>
+        <CursorPos Y="680"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -47,8 +47,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="167"/>
-        <CursorPos X="108" Y="189"/>
+        <TopLine Value="88"/>
+        <CursorPos X="33" Y="108"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit3>
@@ -57,7 +57,8 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalVars"/>
         <EditorIndex Value="-1"/>
-        <CursorPos X="18" Y="14"/>
+        <TopLine Value="83"/>
+        <CursorPos X="59" Y="108"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
@@ -79,10 +80,9 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Dlg_MPSettings"/>
         <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="94"/>
-        <CursorPos X="91" Y="119"/>
-        <UsageCount Value="193"/>
+        <TopLine Value="70"/>
+        <CursorPos X="21" Y="87"/>
+        <UsageCount Value="198"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
@@ -245,9 +245,9 @@
       <Unit27>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\objpas\objpas.pp"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="237"/>
-        <CursorPos X="13" Y="241"/>
-        <UsageCount Value="9"/>
+        <TopLine Value="131"/>
+        <CursorPos X="19" Y="148"/>
+        <UsageCount Value="10"/>
       </Unit27>
       <Unit28>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\inc\text.inc"/>

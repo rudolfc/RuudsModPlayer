@@ -3,6 +3,7 @@ object ModMain: TModMain
   Height = 480
   Top = 250
   Width = 640
+  AllowDropFiles = True
   Caption = 'Ruud''s Modplayer'
   ClientHeight = 460
   ClientWidth = 640
@@ -11,6 +12,7 @@ object ModMain: TModMain
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnDropFiles = FormDropFiles
   Position = poScreenCenter
   LCLVersion = '2.0.7.0'
   object BtnPlaySong: TBitBtn

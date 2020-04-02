@@ -101,11 +101,13 @@ var
   MyTmpFileData            : PInt8;
   MyTotalPatternSize,
   MyTotalSampleSize        : Integer;
-  MyAppClosing             : Boolean;
+  MyAppClosing,
+  MyAppStarting,
   StoppingMySong,
   OrigFormatFile,
-  MySongPaused             : Boolean;
-  WaveOutIsOpen            : Boolean;
+  MySongPaused,
+  WaveOutIsOpen,
+  WaveOutErrReported       : Boolean;
   OrigFmtTmrSpeed          : Single;
   MySampleInfo             : array [0..30] of TModPlaySampleInfo;
 

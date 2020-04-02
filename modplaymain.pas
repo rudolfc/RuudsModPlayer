@@ -188,9 +188,11 @@ Type
     OpenModFile: TOpenDialog;
     procedure BtnPlayRawClick(Sender: TObject);
     procedure BtnPlaySongClick(Sender: TObject);
+    procedure PlayMySong;
     procedure BtnStopSongClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure menuMPSettingsClick(Sender: TObject);
     procedure ParseSpeedControl;
     procedure ParseRunControl;
@@ -242,11 +244,13 @@ Type
     function  WriteWaveChunk(MyBuffer, MySize: Integer): Boolean;
     function  CompleteWaveFile: Boolean;
     function  LoadFile(MyFile: String): Boolean;
+    procedure HandleNewFile(MyFile: String);
     procedure StopPlaying;
     function  MixAndOutputSamples(PlayRaw: Boolean): Boolean;
     function  PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
                          MyRptLen: Integer = 0; MyRptStart: Integer = 0; AmigaSpeed: Word = 428; FineTune: ShortInt = 0): Boolean;
     Function  AllBufsDone: Boolean;
+    procedure OpenAssociatedFile;
     procedure OpenWaveOutput;
     procedure CloseWaveOutput;
 
@@ -283,6 +287,15 @@ var
   DoUpdate : Boolean;
   MyResult : Boolean;
 BEGIN
+  (* If we were started by File Association then play the (already loaded) file *)
+  if MyAppStarting and MyMediaRec.FileLoaded then
+  begin
+    MyAppStarting := False;
+    MySongPaused := False;
+    PlayMySong;
+    Exit;
+  end;
+
   if MySongPaused or StoppingMySong or MyAppClosing then exit;
   (* make sure we don't overtake ourselves *)
   IO_Timer.Enabled := False;
@@ -495,6 +508,9 @@ var
   WinVer  : Single;
   {$ENDIF}
 begin
+  MyAppStarting := True;
+  WaveOutErrReported := False;
+
   for a := 0 to NumAudioBufs-1 do
   begin
     new(PHeader[a]);
@@ -542,6 +558,17 @@ begin
   if NumOutChans < 2 then LRInterMix.Enabled := False;
 end;
 
+procedure TModMain.OpenAssociatedFile;
+begin
+  if ParamCount > 0 then
+  begin
+    (* Only handle the first parameter given (behind our own filename) *)
+    HandleNewFile(ParamStr(1));
+    (* We let the Timer callback hit 'Play' *)
+    IO_Timer.Enabled := True;
+  end;
+end;
+
 procedure TModMain.OpenWaveOutput;
 var
   MyStat, a: Integer;
@@ -568,17 +595,28 @@ begin
 
   (* Make sure both output channels (stereo) are decently set.. (on mono input only left is open by default apparantly!) *)
   if WaveOutIsOpen then
+  begin
+    WaveOutErrReported := False;
     waveOutSetVolume(PMyWaveOutDev^, ((MasterVolume * $FFFF div 64) shl 16) or (MasterVolume * $FFFF div 64));
+  end;
 end;
 
 procedure TModMain.CloseWaveOutput;
+var
+  a: Integer;
 begin
-  if WaveOutIsOpen then
+  if WaveOutIsOpen and (PMyWaveOutDev <> nil) then
   begin
     waveOutReset(PMyWaveOutDev^); //Also marks all buffers as 'WHDR_DONE'
     waveOutClose(PMyWaveOutDev^);
-    WaveOutIsOpen := False;
+  end
+  else
+  begin
+    (* Make sure all our headers are marked 'clean' (Closing WaveOutput might not do that for all buffers!) *)
+    for a := 0 to NumAudioBufs-1 do
+      pheader[a]^.dwFlags := WHDR_DONE;
   end;
+  WaveOutIsOpen := False;
 end;
 
 procedure TModMain.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -623,12 +661,23 @@ begin
 end;
 
 procedure TModMain.BtnPlaySongClick(Sender: TObject);
+begin
+  if not MyMediaRec.FileLoaded then exit;
+  MySongPaused := not MySongPaused;
+
+  PlayMySong;
+end;
+
+procedure TModMain.PlayMySong;
 var
   Cnt: Integer;
 begin
-  if not MyMediaRec.FileLoaded then exit;
-
-  MySongPaused := not MySongPaused;
+  if not WaveOutIsOpen then
+  begin
+    OpenWaveOutput;
+    if WaveOutIsOpen then
+      RunDecInfo.Items.Add('Wave Output re-opened successfully..');
+  end;
 
   if MySongPaused then
   begin (* Pause song *)
@@ -1720,6 +1769,14 @@ begin
     CanClose := False;
 end;
 
+procedure TModMain.FormDropFiles(Sender: TObject;
+  const FileNames: array of String);
+begin
+  HandleNewFile(FileNames[0]);
+  MySongPaused := False;
+  PlayMySong;
+end;
+
 procedure TModMain.menuMPSettingsClick(Sender: TObject);
 begin
   MPSettings.Show;
@@ -1743,6 +1800,21 @@ begin
   Application.CreateForm(TAboutBox, aboutbox);
   aboutbox.ShowModal;
   aboutbox.Release;
+end;
+
+procedure TModMain.HandleNewFile(MyFile: String);
+begin
+  (* stop a possible playing song first *)
+  StopPlaying;
+
+  if not LoadFile(MyFile) then
+  begin
+    MyOpenInFile := '';
+    Exit;
+  end;
+  (* Remember our intputfilename plus it's path, but excluding its extension *)
+  MyOpenInFile := OpenModFile.FileName;
+  MyOpenInFile := Copy(MyOpenInFile, 1, LastDelimiter('.',MyOpenInFile) - 1);
 end;
 
 procedure TModMain.StopPlaying;
@@ -1874,7 +1946,11 @@ begin
   end;
   if not WaveOutIsOpen then
   begin
-    RunDecInfo.Items.Add('No Wave Output available!');
+    if not WaveOutErrReported then
+    begin
+      WaveOutErrReported := True;
+      RunDecInfo.Items.Add('No Wave Output available! (Continuing silent playback..)');
+    end;
     (* We might still be writing a wave output file.. *)
     Result := True;
     exit;
@@ -1890,20 +1966,22 @@ begin
   if MyStat <> MMSYSERR_NOERROR then
   begin
     RunDecInfo.Items.Add('waveOutPrepareHeader returns error: '+IntToStr(Mystat)+ '.');
+    CloseWaveOutput;
     exit;
   end;
   if pheader[BufNr]^.dwFlags and WHDR_PREPARED <> WHDR_PREPARED then
   begin
     RunDecInfo.Items.Add('waveOutPrepareHeader did not prepare for buffer #' + IntToStr(BufNr+1) + '! Aborting.');
+    CloseWaveOutput;
     exit;
   end;
   MyStat := waveOutWrite(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
   if MyStat <> MMSYSERR_NOERROR then
   begin
     RunDecInfo.Items.Add('waveOutWrite did not output buffer #' + IntToStr(BufNr+1) + '! Aborting.');
+    CloseWaveOutput;
     exit;
   end;
-  MyStat := waveOutUnPrepareHeader(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
 end;
 
 function TModMain.PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
@@ -2403,18 +2481,8 @@ end;
 
 procedure TModMain.MenuFileOpenClick(Sender: TObject);
 begin
-  (* stop a possible playing song first *)
-  StopPlaying;
-
   if not OpenModFile.Execute then exit;
-  if not LoadFile(OpenModFile.FileName) then
-  begin
-    MyOpenInFile := '';
-    Exit;
-  end;
-  (* Remember our intputfilename plus it's path, but excluding its extension *)
-  MyOpenInFile := OpenModFile.FileName;
-  MyOpenInFile := Copy(MyOpenInFile, 1, LastDelimiter('.',MyOpenInFile) - 1);
+  HandleNewFile(OpenModFile.FileName);
 end;
 
 function TModMain.StartWaveFile(FName: String): Boolean;
