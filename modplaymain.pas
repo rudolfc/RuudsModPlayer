@@ -122,6 +122,7 @@ Type
     OldTremSpeed,
     OldTremDepth,
     MyArpeggio,
+    MyFineTuneOR,
     MyFinePorta,
     MyCutNote,
     MyDelayNote,
@@ -760,6 +761,8 @@ begin
         OldTremDepth := 0;
         (* No Arpeggio active *)
         MyArpeggio := 0;
+        (* No Finetune 'override' active *)
+        MyFineTuneOR := -1;
         (* No Cutnote active *)
         MyCutNote := -1;
         (* No Delaynote active *)
@@ -1079,7 +1082,7 @@ begin
 
       if (PatDecode.EffectParam shr 4) = 3 then (* cmd: effect Glissando Control *)
       begin
-        //fixme: add Glissando Control (used for modification of Porta to Note)
+        //fixme (low prio: not encountered yet): add Glissando Control (used for modification of Porta to Note)
         RunDecInfo.Items.Add('Warning: Glissando Control not yet implemented!');
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
@@ -1093,7 +1096,7 @@ begin
   begin
     if NewInstr then
     begin
-      (* Reset/stop Vibrato on -every new note- (!) *)
+      (* Reset/stop Vibrato on -every new instrument- (!) *)
       MyVibSpeed := 0;   (* effect stop *)
       MyVibDepth := 0;   (* effect stop *)
       MyVibratoPos := 0; (* engine reset *)
@@ -1128,7 +1131,7 @@ begin
     begin
       if (PatDecode.EffectParam shr 4) = 4 then (* cmd: effect Vibrato Waveform/Retrig *)
       begin
-        //fixme: add Vibrato Waveform/Retrig
+        //fixme (low prio: not encountered yet): add Vibrato Waveform/Retrig
         RunDecInfo.Items.Add('Warning: Vibrato Waveform/Retrig not yet implemented!');
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
@@ -1136,22 +1139,23 @@ begin
   end;
 end;
 
-procedure DoArpeggioUpdate;
+procedure DoArpeggioUpdate(NewInstr, NewNote: Boolean);
 begin
   with MySongLogic[MyCh] do
   begin
     MyArpeggio := 0;
-    if (PatDecode.EffectNumber = 0) and (PatDecode.EffectParam <> 0) then
+    if (PatDecode.EffectNumber = 0) and (PatDecode.EffectParam <> 0) then (* cmd: effect Arpeggio *)
       MyArpeggio := PatDecode.EffectParam;
 
+    if NewInstr then
+    begin
+      (* Reset/stop Finetune 'override' on -every new instrument- (!) *)
+      MyFineTuneOR := -1;
+    end;
     if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
     begin
-      if (PatDecode.EffectParam shr 4) = 5 then (* cmd: effect Set Finetune *)
-      begin
-        //fixme: add Set Finetune
-        RunDecInfo.Items.Add('Warning: Set Finetune not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
+      if (PatDecode.EffectParam shr 4) = 5 then (* cmd: effect Set Finetune 'override' *)
+        MyFineTuneOR := PatDecode.EffectParam and $0f;
     end;
   end;
 end;
@@ -1190,7 +1194,7 @@ begin
     begin
       if (PatDecode.EffectParam shr 4) = 7 then (* cmd: effect Tremolo Waveform/Retrig *)
       begin
-        //fixme: add Tremolo Waveform/Retrig
+        //fixme (low prio: not encountered yet): add Tremolo Waveform/Retrig
         RunDecInfo.Items.Add('Warning: Tremolo Waveform/Retrig not yet implemented!');
         RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
       end;
@@ -1296,7 +1300,7 @@ begin
         DoRetrigParamUpdate;              (* in effect resets all Retrigger effects only since we blocked cmd exec above. *)
         DoPortaParamUpdate(False, False); (* all Porta effects *)
         DoVibParamUpdate(False, False);   (* all Vibrato effects *)
-        DoArpeggioUpdate;                 (* all Arpeggio effects *)
+        DoArpeggioUpdate(False, False);   (* all Arpeggio effects *)
         DoTremoloUpdate(False, False);    (* all Tremolo effects *)
         DoVolParamUpdate(False, False);   (* all Volume effects *)
 
@@ -1403,7 +1407,7 @@ begin
           if MyPortaToSpeed <> 0 then
             RetrigSample := False;
           DoVibParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Vibrato effects *)
-          DoArpeggioUpdate;                                  (* all Arpeggio effects *)
+          DoArpeggioUpdate(MyDelayNote < 0, RetrigSample);   (* all Arpeggio effects *)
           DoTremoloUpdate(MyDelayNote < 0, RetrigSample);    (* all Tremolo effects *)
           DoVolParamUpdate(MyDelayNote < 0, RetrigSample);   (* all Volume effects *)
 
@@ -1446,7 +1450,7 @@ begin
             if MyPortaToSpeed <> 0 then
               RetrigSample := False;
             DoVibParamUpdate(False, RetrigSample);   (* all Vibrato effects *)
-            DoArpeggioUpdate;                        (* all Arpeggio effects *)
+            DoArpeggioUpdate(False, RetrigSample);   (* all Arpeggio effects *)
             DoTremoloUpdate(False, RetrigSample);    (* all Tremolo effects *)
             DoVolParamUpdate(False, RetrigSample);   (* all Volume effects *)
 
@@ -1619,6 +1623,8 @@ begin
     OldTremDepth := 0;
     (* No Arpeggio active *)
     MyArpeggio := 0;
+    (* No Finetune 'override' active *)
+    MyFineTuneOR := -1;
     (* No Cutnote active *)
     MyCutNote := -1;
     (* No Delaynote active *)
@@ -2019,7 +2025,13 @@ begin
     (* Amigaspeed not found in table means no sound. *)
     exit;
   end;
-  (* now apply sample's finetune setting and fetch finetuned AmigaSpeed.. *)
+  (* now apply sample's finetune -OR- effect 'Set Finetune' setting: and fetch finetuned AmigaSpeed.. *)
+  with MySongLogic[MyCh] do
+    if MyFineTuneOR >= 0 then
+    begin
+      MyFineTune := MyFineTuneOR;
+      if MyFineTune > 7 then Dec(MyFineTune, 16);
+    end;
   Result := MyPeriodTable[MyFineTune, MyTabIdx];
   (* ..correct with (possible) effect Fine Porta up/down.. *)
   Result := Result + MySongLogic[MyCh].MyFinePorta;
@@ -2127,8 +2139,10 @@ begin
     MyPrtaToPerPart := 0; (* engine reset *)
     (* No Arpeggio active *)
     MyArpeggio := 0; (* effect stop/engine reset *)
+    (* Reset/stop Finetune 'override' *)
+    MyFineTuneOR := -1;
 
-    //fixme: kill all running effects that are added to the player..
+    //fixme (so for remaining low prio effects): kill all running effects that are added to the player..
 
     (* Restore Volume to 'default' since a sample is specified *)
     MyVolume := MySampleInfo[PatDecode.SampleNumber-1].Volume;
@@ -2193,7 +2207,7 @@ begin
         if MyVibSpeed <> 0 then
         begin
           (* get sinusoidal value from position.. *)
-          // Fixme: We should add the other possible waveforms.. (Effect E4x: Set Vibrato Waveform)
+          //fixme (low prio: not encountered yet): Add other waveforms.. (Effect E4x: Set Vibrato Waveform)
           MyVibDelta := MySineTable[MyVibratoPos and $1f];
           if MyVibratoPos < 0 then MyVibDelta := -MyVibDelta;
           (* get amplitude and combine to get absolute frequency modifier.. *)
@@ -2246,7 +2260,7 @@ begin
         if MyTremSpeed <> 0 then
         begin
           (* get sinusoidal value from position.. *)
-          // Fixme: We should add the other possible waveforms.. (Effect E7x: Set Tremolo Waveform)
+          //fixme (low prio: not encountered yet): Add other waveforms.. (Effect E7x: Set Tremolo Waveform)
           MyTremDelta := MySineTable[MyTremoloPos and $1f];
           if MyTremoloPos < 0 then MyTremDelta := -MyTremDelta;
           (* get effect amplitude and combine to get absolute volume modifier.. *)
@@ -2342,15 +2356,16 @@ begin
         (* Please note: 'value-1' below is used because of inter-new-sample-data-connection requirement! *)
         MyInBufCnt := MyFirstStart - 1;
         (* Setup neutral since on tick0 of a new sample ChkDoPortaVibrato should not be executed *)
-        MyInSmpUp := Up; // Fixme for Vibrato: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or no)
+        //fixme (low prio: not encountered yet): For effect 'Set Vibrato Waveform'! (retrig at Tick0 or not)
+        MyInSmpUp := Up;
         SmpVibUpCnt := MyInSmpUp;
         (* Reset our internal Tick Counter *)
         MySmpTCnt := 0;
         (* Vibrato is 'centered' (zero) _only_ at new sample start! *)
-        // Fixme: depends on Effect E4x: Set Vibrato Waveform! (retrig at Tick0 or not)
+        //fixme (low prio: not encountered yet): For Effect 'Set Vibrato Waveform'! (retrig at Tick0 or not)
         MyVibratoPos := 0;
         (* Tremolo is 'centered' (zero) _only_ at new sample start! *)
-        // Fixme: depends on Effect E7x: Set Tremolo Waveform! (retrig at Tick0 or not)
+        //fixme (low prio: not encountered yet): For Effect 'Set Tremolo Waveform'! (retrig at Tick0 or not)
         MyTremoloPos := 0;
         (* Cancel possible buffer interconnection data as we do a 'fresh start' *)
         MyConBufFill := 0;
