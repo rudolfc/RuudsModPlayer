@@ -2204,6 +2204,7 @@ begin
             MySample2 := 0;
         end;
         (* do 'Vibrato' effect *)
+        MyVibDelta := 0;
         if MyVibSpeed <> 0 then
         begin
           (* get sinusoidal value from position.. *)
@@ -2257,6 +2258,7 @@ begin
         UpdateMyVolSlide(MyCh, MyTickCnt);
 
         (* do 'Tremolo' effect *)
+        MyTremDelta := 0;
         if MyTremSpeed <> 0 then
         begin
           (* get sinusoidal value from position.. *)
