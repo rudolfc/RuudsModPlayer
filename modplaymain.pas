@@ -1819,7 +1819,7 @@ begin
     Exit;
   end;
   (* Remember our intputfilename plus it's path, but excluding its extension *)
-  MyOpenInFile := OpenModFile.FileName;
+  MyOpenInFile := MyFile;
   MyOpenInFile := Copy(MyOpenInFile, 1, LastDelimiter('.',MyOpenInFile) - 1);
 end;
 
@@ -1942,7 +1942,11 @@ begin
     end;
 
     (* Save buffer in file if requested *)
-    if CBSaveWave.Checked then WriteWaveChunk(BufNr, MyOutBufLen * NumOutChans);
+    if CBSaveWave.Checked then
+    begin
+      WriteWaveChunk(BufNr, MyOutBufLen * NumOutChans);
+      Exit; (* Just decode and save, don't send to soundcard. *)
+    end;
   end;
 
   if MyAppClosing then
