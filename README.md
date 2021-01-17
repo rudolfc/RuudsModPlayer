@@ -17,7 +17,5 @@ It's a basic player which currently has the following functionality:
 
 I guess that's about it for now.
 
-Stay tuned for more updates over the coming time :-)
-
 
 Rudolf Cornelissen.
