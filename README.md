@@ -12,7 +12,8 @@ It's a basic player which currently has the following functionality:
 - You can output to canonical wave files;
 - You can view the file content (samples, all pattern tables, etc)
 - You can show debug output onscreen while playing a song (tracker info);
-- You can play the raw samples on a fixed speed.
+- You can play the raw samples on a fixed speed;
+- You can specify where to start the song (handy for playing i.e. game sound effects which might be included in some files).
 
 I guess that's about it for now.
 
