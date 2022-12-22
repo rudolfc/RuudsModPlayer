@@ -322,20 +322,19 @@ BEGIN
     end;
 
     if not MyAppClosing then
-    begin
-      RunDecInfo.Items.Add(S);
-      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-    end;
+      RunDecInfo.Items.Insert(0, S);
   end;
 
   (* Process all channels *)
   ParseSpeedControl;
   (* Note: The 'forward' playing order of channels is important (in case of multiple jump/break cmd's in one row) *)
-  For Ch := 1 to MyMediaRec.Channels do
+  RunDecInfo.Items.BeginUpdate;
+  For Ch := MyMediaRec.Channels downto 1 do
   begin
     MyResult := ExecNote(Ch);
     if not MyResult then break;
   end;
+  RunDecInfo.Items.EndUpdate;
   if MyResult then
   begin
     MixAndOutputSamples(False);
@@ -539,7 +538,7 @@ begin
   IO_Timer := TFPTimer.Create(nil);
 
   {$IFDEF MSWINDOWS}
-  RunDecInfo.Items.Add('Windows version ' + IntToStr(Win32MajorVersion) + '.' + IntToStr(Win32MinorVersion));
+  RunDecInfo.Items.Insert(0, 'Windows version ' + IntToStr(Win32MajorVersion) + '.' + IntToStr(Win32MinorVersion));
   WinVer := Win32MajorVersion + Win32MinorVersion;
   if WinVer < 6.1 then
     IO_Timer.UseTimerThread := False (* Laz: XP SP3 totally messes up here if a seperate thread is used.. *)
@@ -590,7 +589,7 @@ begin
 
   MyStat := waveOutOpen(PMyWaveOutDev,WAVE_MAPPER,PMywfx,0,0,CALLBACK_NULL);
   if MyStat <> MMSYSERR_NOERROR then
-    RunDecInfo.Items.Add('Could not open Wave output device!')
+    RunDecInfo.Items.Insert(0, 'Could not open Wave output device!')
   else
     WaveOutIsOpen := True;
 
@@ -677,7 +676,7 @@ begin
   begin
     OpenWaveOutput;
     if WaveOutIsOpen then
-      RunDecInfo.Items.Add('Wave Output re-opened successfully..');
+      RunDecInfo.Items.Insert(0, 'Wave Output re-opened successfully..');
   end;
 
   if MySongPaused then
@@ -857,10 +856,7 @@ var
 procedure DebugString(MyText: String);
 begin
   if CBCmdDebug.Checked then
-  begin
-    RunDecInfo.Items.Add('>> ' + MyText);
-    RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-  end;
+    RunDecInfo.Items.Insert(0, '>> ' + MyText);
 end;
 
 procedure DoRetrigParamUpdate;
@@ -1080,12 +1076,9 @@ begin
       if (PatDecode.EffectParam shr 4) = 2 then (* cmd: effect Fine Porta Down *)
         Inc(MyFinePorta, PatDecode.EffectParam and $0f);
 
+      //fixme (low prio: not encountered yet): add Glissando Control (used for modification of Porta to Note)
       if (PatDecode.EffectParam shr 4) = 3 then (* cmd: effect Glissando Control *)
-      begin
-        //fixme (low prio: not encountered yet): add Glissando Control (used for modification of Porta to Note)
-        RunDecInfo.Items.Add('Warning: Glissando Control not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
+        RunDecInfo.Items.Insert(0, 'Warning: Glissando Control not yet implemented!');
     end;
   end;
 end;
@@ -1129,12 +1122,9 @@ begin
 
     if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
     begin
+      //fixme (low prio: not encountered yet): add Vibrato Waveform/Retrig
       if (PatDecode.EffectParam shr 4) = 4 then (* cmd: effect Vibrato Waveform/Retrig *)
-      begin
-        //fixme (low prio: not encountered yet): add Vibrato Waveform/Retrig
-        RunDecInfo.Items.Add('Warning: Vibrato Waveform/Retrig not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
+        RunDecInfo.Items.Insert(0, 'Warning: Vibrato Waveform/Retrig not yet implemented!');
     end;
   end;
 end;
@@ -1192,12 +1182,9 @@ begin
 
     if PatDecode.EffectNumber = 14 then  (* cmd: Extended commands *)
     begin
+      //fixme (low prio: not encountered yet): add Tremolo Waveform/Retrig
       if (PatDecode.EffectParam shr 4) = 7 then (* cmd: effect Tremolo Waveform/Retrig *)
-      begin
-        //fixme (low prio: not encountered yet): add Tremolo Waveform/Retrig
-        RunDecInfo.Items.Add('Warning: Tremolo Waveform/Retrig not yet implemented!');
-        RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-      end;
+        RunDecInfo.Items.Insert(0, 'Warning: Tremolo Waveform/Retrig not yet implemented!');
     end;
   end;
 end;
@@ -1376,10 +1363,7 @@ begin
                      ', RpL ' + IntToStr(MySampleInfo[PatDecode.SampleNumber-1].RptLength) +
                      ', Fin ' + IntToStr(MySampleInfo[PatDecode.SampleNumber-1].FineTune);
           if not MyAppClosing then
-          begin
-            RunDecInfo.Items.Add(S);
-            RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
-          end;
+            RunDecInfo.Items.Insert(0, S);
         end;
 
         (* Play sample *)
@@ -1959,7 +1943,7 @@ begin
     if not WaveOutErrReported then
     begin
       WaveOutErrReported := True;
-      RunDecInfo.Items.Add('No Wave Output available! (Continuing silent playback..)');
+      RunDecInfo.Items.Insert(0, 'No Wave Output available! (Continuing silent playback..)');
     end;
     (* We might still be writing a wave output file.. *)
     Result := True;
@@ -1975,20 +1959,20 @@ begin
   MyStat := waveOutPrepareHeader(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
   if MyStat <> MMSYSERR_NOERROR then
   begin
-    RunDecInfo.Items.Add('waveOutPrepareHeader returns error: '+IntToStr(Mystat)+ '.');
+    RunDecInfo.Items.Insert(0, 'waveOutPrepareHeader returns error: '+IntToStr(Mystat)+ '.');
     CloseWaveOutput;
     exit;
   end;
   if pheader[BufNr]^.dwFlags and WHDR_PREPARED <> WHDR_PREPARED then
   begin
-    RunDecInfo.Items.Add('waveOutPrepareHeader did not prepare for buffer #' + IntToStr(BufNr+1) + '! Aborting.');
+    RunDecInfo.Items.Insert(0, 'waveOutPrepareHeader did not prepare for buffer #' + IntToStr(BufNr+1) + '! Aborting.');
     CloseWaveOutput;
     exit;
   end;
   MyStat := waveOutWrite(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
   if MyStat <> MMSYSERR_NOERROR then
   begin
-    RunDecInfo.Items.Add('waveOutWrite did not output buffer #' + IntToStr(BufNr+1) + '! Aborting.');
+    RunDecInfo.Items.Insert(0, 'waveOutWrite did not output buffer #' + IntToStr(BufNr+1) + '! Aborting.');
     CloseWaveOutput;
     exit;
   end;
@@ -2048,9 +2032,8 @@ begin
     begin
       S := '';
       if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
-      RunDecInfo.Items.Add(S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(MyTabIdx) +
+      RunDecInfo.Items.Insert(0, S + 'Inspeed: '  + IntToStr(MyAmigaSpeed)+', Index: ' + IntToStr(MyTabIdx) +
         ', Finetune: ' + IntToStr(MyFineTune) + ', Outspeed: ' + inttostr(Result));
-      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
     end;
 end;
 
@@ -2305,8 +2288,7 @@ begin
     begin
       S := '';
       if MySongLogic[MyCh].MySongEnding then S := 'Ch' + IntToStr(MyCh) + ': ';
-      RunDecInfo.Items.Add(S + 'Playing empty buffer (silence)');
-      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      RunDecInfo.Items.Insert(0, S + 'Playing empty buffer (silence)');
     end;
 
     (* Find AmigaSpeed in our default (non-finepitched) notes lookup table *)
@@ -2314,8 +2296,7 @@ begin
     (* Abort on fail(!) *)
     if MyInPerPart < 0 then
     begin
-      RunDecInfo.Items.Add('>>> ERROR <<< (Illegal AmigaSpeed specified, cannot play silence buffer)');
-      RunDecInfo.ItemIndex := RunDecInfo.Items.Count - 1;
+      RunDecInfo.Items.Insert(0, '>>> ERROR <<< (Illegal AmigaSpeed specified, cannot play silence buffer)');
       exit;
     end;
   end;
@@ -2479,7 +2460,7 @@ begin
         MyConBufFill := OutCnt - MyOutBufLen;
         if MyConBufFill > MyConBufSize then
         begin
-          RunDecInfo.Items.Add('Warning: Connection buffer too small! (Need ' + IntToStr(MyConBufFill) + ' samples)');
+          RunDecInfo.Items.Insert(0, 'Warning: Connection buffer too small! (Need ' + IntToStr(MyConBufFill) + ' samples)');
           MyConBufFill := MyConBufSize;
         end;
         for i := 0 to MyConBufFill - 1 do
