@@ -1994,6 +1994,9 @@ var
   Up           : Single;
   MyTickCnt    : Integer;
   S            : String;
+  SmpA, SmpB,
+  SmpC, SmpD,
+  SmpX, QFAmp  : Single;
 
 
 function AmigaSpeedChk(MyAmigaSpeed: Word; MyFineTune: ShortInt; out MyTabIdx: Integer): Integer;
@@ -2417,20 +2420,107 @@ begin
       (* Keep last newly fetched buffer value for the next buffer as that needs to connect to this one (always!) *)
       (* Note: ChkDoPortaVibrato just might have updated MySample2 just now! *)
       LastInSample := MySample2;
-      (* Determine the upsampling value step per resulting full sample *)
-      MySampleStep := (MySample2 - MySample1) / MyInSmpUp;
-      (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
-      MyTmpSample := MySample1 + MySampleStep * (1-InSmpUpRemain);
-      MyChBuf[MyCh][OutCnt] := Round(MyTmpSample);
-      Inc(OutCnt);
-      (* please note that we always finish upsamping each inbuffer sample, even across the set outbuffer boundary! *)
-      While (SmpVibUpCnt >= 1.0) do
+
+      if true then
       begin
-        MyTmpSample := MyTmpSample + MySampleStep;
-        MyChBuf[MyCh][OutCnt] := Round(MyTmpSample);
-        SmpVibUpCnt := SmpVibUpCnt - 1;
+        (* Execute cubic interpolation,
+           which has 4 input points: signal goes -through- control points: so amplitude stays same to input signal)
+           https://www.paulinternet.nl/?page=bicubic
+           x = 0 at SmpB, x = 1 at SmpC (x = interpolation range: 0..1).
+         *)
+
+        (* Collect control points *)
+        SmpB := MySample1;
+        SmpC := MySample2;
+        (* Fetch SmpA *)
+        if MySmpPtr <> nil then
+        begin
+          if MyInBufCnt > 0 then
+            SmpA := (MySmpPtr[MyInBufCnt-1] shl 8) * MyVolume / 64
+          else
+            SmpA := SmpB;
+        end
+        else
+          SmpA := SmpB;
+        (* Fetch SmpD *)
+        if MySmpPtr <> nil then
+        begin
+          if MyInBufCnt+2 < MyBufLen then
+            SmpD := (MySmpPtr[MyInBufCnt+2] shl 8) * MyVolume / 64
+          else
+            if MyRptLen > 2 then
+            begin
+              if MyInBufCnt+1 < MyBufLen then
+                SmpD := (MySmpPtr[MyRptStart] shl 8) * MyVolume / 64
+              else
+                SmpD := (MySmpPtr[MyRptStart+1] shl 8) * MyVolume / 64;
+            end
+            else
+              SmpD := SmpC;
+        end
+        else
+          SmpD := SmpC;
+
+        (* Qubic interpolation implies waveform 'overshoots' when input waveforms clip:
+           Accomodate for that so our restored/improved waveforms are mostly not clipped again.
+           Also using this for the linear interpolation to keep it's volume comparable. *)
+        QFAmp := 0.85;
+
+        (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
+        SmpX := (1-InSmpUpRemain) / MyInSmpUp;
+
+        (* Execute interpolation including the first 'special' sample *)
+        SmpVibUpCnt := SmpVibUpCnt + 1;
+        (* please note that we always finish upsamping each inbuffer sample, even across the set outbuffer boundary! *)
+        While (SmpVibUpCnt >= 1.0) do
+        begin
+          MyTmpSample := (
+            SmpB + 0.5*SmpX*(
+              SmpC - SmpA + SmpX*(
+                2.0*SmpA - 5.0*SmpB + 4.0*SmpC - SmpD + SmpX*(
+                  3.0*(SmpB-SmpC) +
+                    SmpD - SmpA)))) * QFAmp;
+          (* Prevent signal polarity inversion when clipping occurs *)
+          if MyTmpSample >  32767 then
+          begin
+            RunDecInfo.Items.Insert(0,'Clipping at signal max');
+            MyTmpSample := 32767;
+          end;
+          if MyTmpSample < -32768 then
+          begin
+            RunDecInfo.Items.Insert(0,'Clipping at signal min');
+            MyTmpSample := -32768;
+          end;
+          MyChBuf[MyCh][OutCnt] := Round(MyTmpSample);
+          if smpX < 0 then RunDecInfo.Items.Insert(0,'X < 0');  //yeah remove
+          if smpX > 1 then RunDecInfo.Items.Insert(0,'X > 1');  //yeah remove
+          smpX := SmpX + 1 / MyInSmpUp;
+          SmpVibUpCnt := SmpVibUpCnt - 1;
+          Inc(OutCnt);
+        end;
+      end
+      else
+      begin
+        (* Qubic interpolation implies waveform 'overshoots' when input waveforms clip:
+           Accomodate for that so our restored/improved waveforms are mostly not clipped again.
+           Also using this for the linear interpolation to keep it's volume comparable. *)
+        QFAmp := 0.80;
+        (* Determine the upsampling value step per resulting full sample *)
+        MySampleStep := (MySample2 - MySample1) / MyInSmpUp;
+        (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
+        MyTmpSample := MySample1 + MySampleStep * (1-InSmpUpRemain);
+        MyChBuf[MyCh][OutCnt] := Round(MyTmpSample * QFAmp);
         Inc(OutCnt);
+        (* please note that we always finish upsamping each inbuffer sample, even across the set outbuffer boundary! *)
+        While (SmpVibUpCnt >= 1.0) do
+        begin
+          MyTmpSample := MyTmpSample + MySampleStep;
+          MyChBuf[MyCh][OutCnt] := Round(MyTmpSample * QFAmp);
+          SmpVibUpCnt := SmpVibUpCnt - 1;
+          Inc(OutCnt);
+        end;
       end;
+
       if (MyInBufCnt < MyBufLen) then
       begin
         Inc(MyInBufCnt);
