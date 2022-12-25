@@ -193,6 +193,7 @@ object ModMain: TModMain
     Width = 123
     Anchors = [akLeft, akBottom]
     Caption = 'Linear interpolation'
+    OnChange = linear_synthChange
     TabOrder = 16
   end
   object cubic_synth: TRadioButton
@@ -202,6 +203,7 @@ object ModMain: TModMain
     Width = 122
     Anchors = [akLeft, akBottom]
     Caption = 'Cubic interpolation'
+    OnChange = cubic_synthChange
     TabOrder = 17
   end
   object Label2: TLabel

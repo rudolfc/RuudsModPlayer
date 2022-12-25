@@ -91,6 +91,13 @@ type
 const
   TAB = CHR(09);
 
+type
+  TSettings = packed record
+    MyTVSpeed       : Single;
+    OutSampleRate   : Integer;
+    CubicAudioSynth : Boolean;
+  end;
+
 var
   MyMediaRec: TModMediaRec;
   MyFileHeader: TModFileHeader;
@@ -110,6 +117,7 @@ var
   WaveOutErrReported       : Boolean;
   OrigFmtTmrSpeed          : Single;
   MySampleInfo             : array [0..30] of TModPlaySampleInfo;
+  MySettings               : TSettings;
 
 implementation
 

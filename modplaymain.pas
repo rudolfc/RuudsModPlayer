@@ -192,6 +192,8 @@ Type
     OpenModFile: TOpenDialog;
     procedure BtnPlayRawClick(Sender: TObject);
     procedure BtnPlaySongClick(Sender: TObject);
+    procedure cubic_synthChange(Sender: TObject);
+    procedure linear_synthChange(Sender: TObject);
     procedure PlayMySong;
     procedure BtnStopSongClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -230,6 +232,7 @@ Type
     MyWaveHeader   : TWavHeader;
     MyOpenInFile   : String;
     MyJmpBreak     : Integer;
+    MyCubicSynth   : Boolean;
 
     (* the longest buffer getting used is @ 32PBM = 78mS * 31 ticks = 2418mS * Samples/sec. *)
     MyChBuf      : Array[1..MaxNumChBufs, 0..  (1*78*31*MaxSampleRate div 1000)] of SmallInt; (* mono channel output buffers *)
@@ -512,6 +515,7 @@ var
   {$ENDIF}
 begin
   cubic_synth.Checked := True;
+  MyCubicSynth := True;
   MyAppStarting := True;
   WaveOutErrReported := False;
 
@@ -580,7 +584,7 @@ begin
   if WaveOutIsOpen then exit;
 
   PMywfx^.nChannels := NumOutChans;
-  PMywfx^.nSamplesPerSec := MPSettings.MySettings.OutSampleRate;
+  PMywfx^.nSamplesPerSec := MySettings.OutSampleRate;
   PMywfx^.wBitsPerSample := 16;
   PMywfx^.cbSize := 0; // size of _extra_ info, none for PCM data *
   PMywfx^.wFormatTag := WAVE_FORMAT_PCM;
@@ -670,6 +674,16 @@ begin
   MySongPaused := not MySongPaused;
 
   PlayMySong;
+end;
+
+procedure TModMain.cubic_synthChange(Sender: TObject);
+begin
+  MySettings.CubicAudioSynth := True;
+end;
+
+procedure TModMain.linear_synthChange(Sender: TObject);
+begin
+  MySettings.CubicAudioSynth := False;
 end;
 
 procedure TModMain.PlayMySong;
@@ -2067,7 +2081,7 @@ begin
     (* We already determined our official finepitched correct AmigaSpeed, apply it now *)
     MyInPerPart := MyNewInPeriod;
     (* calculate initial (coarse) up-sample rate *)
-    Up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPerPart) / MPSettings.MySettings.MyTVSpeed;
+    Up := MySettings.OutSampleRate * 2 * (MyInPerPart) / MySettings.MyTVSpeed;
     (* New sample starting: point to first buffer position *)
     (* Please note: zero instead of 'value-1' since we are already busy building the current buffer! *)
     MyInBufCnt := 0;
@@ -2166,7 +2180,7 @@ begin
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
     Inc(MySmpTCnt, MyIncFactor);
-    MyTickTime := Round(TmrInterval * MPSettings.MySettings.OutSampleRate / 1000);
+    MyTickTime := Round(TmrInterval * MySettings.OutSampleRate / 1000);
     (* Execute once per 'Tick' -excluding Tick 0- .. *)
     if MySmpTcnt >= MyTickTime then
     begin
@@ -2272,8 +2286,8 @@ begin
 
         (* finally calculate new upsampling factor *)
         MyInSmpUp :=
-          MPSettings.MySettings.OutSampleRate * 2 * (MyInPerPart + MyPrtaPerPart + MyPrtaToPerPart + MyVibDelta) /
-          MPSettings.MySettings.MyTVSpeed;
+          MySettings.OutSampleRate * 2 * (MyInPerPart + MyPrtaPerPart + MyPrtaToPerPart + MyVibDelta) /
+          MySettings.MyTVSpeed;
         if MyInSmpUp <= 0 then MyInSmpUp := up; (* failsave! *)
         (* Correct for already played period-part of the current input sample *)
         OldSmpVibUpCnt := SmpVibUpCnt;
@@ -2337,7 +2351,7 @@ begin
   end;
 
   (* calculate initial (coarse) up-sample rate *)
-  up := MPSettings.MySettings.OutSampleRate * 2 * (MyInPerPart) / MPSettings.MySettings.MyTVSpeed;
+  up := MySettings.OutSampleRate * 2 * (MyInPerPart) / MySettings.MyTVSpeed;
 
   with MySongLogic[MyCh], MySampleLogic[MyCh] do
   begin
@@ -2379,7 +2393,7 @@ begin
     end;
 
     (* We determine our output buffer size per note: tick-time * nr-ticks-per-note *)
-    MyOutBufLen := Round(TmrInterval * TickSpeed * MPSettings.MySettings.OutSampleRate / 1000);
+    MyOutBufLen := Round(TmrInterval * TickSpeed * MySettings.OutSampleRate / 1000);
     (* First place still pending data from the previous buffer in our output buffer (if any) *)
     for i := 0 to MyConBufFill - 1 do
       MyChBuf[MyCh][i] := MyConBufContent[i];
@@ -2425,12 +2439,17 @@ begin
       (* Note: ChkDoPortaVibrato just might have updated MySample2 just now! *)
       LastInSample := MySample2;
 
-      if cubic_synth.Checked then
+      (* Qubic interpolation implies waveform 'overshoots' when input waveforms clip:
+         Accomodate for that so our restored/improved waveforms are mostly not clipped again.
+         Also using this for the linear interpolation to keep it's volume comparable. *)
+      QFAmp := 0.85;
+
+      if MySettings.CubicAudioSynth then
       begin
-        if not MPSettings.MySettings.CubicAudioSynth then
+        if not MyCubicSynth then
         begin
           RunDecInfo.Items.Insert(0,'Switched to Cubic interpolation');
-          MPSettings.MySettings.CubicAudioSynth := True;
+          MyCubicSynth := True;
         end;
 
         (* Execute cubic interpolation,
@@ -2471,12 +2490,7 @@ begin
         else
           SmpD := SmpC;
 
-        (* Qubic interpolation implies waveform 'overshoots' when input waveforms clip:
-           Accomodate for that so our restored/improved waveforms are mostly not clipped again.
-           Also using this for the linear interpolation to keep it's volume comparable. *)
-        QFAmp := 0.85;
-
-        (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
+        (* we 'play' already past the timestamp of our starting sample: Use delay from the previous run's leftover time *)
         SmpX := (1-InSmpUpRemain) / MyInSmpUp;
 
         (* Execute interpolation including the first 'special' sample *)
@@ -2511,20 +2525,15 @@ begin
       end
       else
       begin
-        if MPSettings.MySettings.CubicAudioSynth then
+        if MyCubicSynth then
         begin
           RunDecInfo.Items.Insert(0,'Switched to Linear interpolation');
-          MPSettings.MySettings.CubicAudioSynth := False;
+          MyCubicSynth := False;
         end;
-
-        (* Qubic interpolation implies waveform 'overshoots' when input waveforms clip:
-           Accomodate for that so our restored/improved waveforms are mostly not clipped again.
-           Also using this for the linear interpolation to keep it's volume comparable. *)
-        QFAmp := 0.85;
 
         (* Determine the upsampling value step per resulting full sample *)
         MySampleStep := (MySample2 - MySample1) / MyInSmpUp;
-        (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
+        (* we 'play' already past the timestamp of our starting sample: Use delay from the previous run's leftover time *)
         MyTmpSample := MySample1 + MySampleStep * (1-InSmpUpRemain);
         MyChBuf[MyCh][OutCnt] := Round(MyTmpSample * QFAmp);
         Inc(OutCnt);

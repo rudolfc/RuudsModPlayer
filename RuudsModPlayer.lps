@@ -9,7 +9,7 @@
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <CursorPos Y="22"/>
+        <CursorPos Y="14"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="2474"/>
-        <CursorPos Y="2495"/>
+        <TopLine Value="2526"/>
+        <CursorPos X="16" Y="2533"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -56,8 +56,8 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalVars"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="83"/>
-        <CursorPos X="59" Y="108"/>
+        <TopLine Value="82"/>
+        <CursorPos Y="101"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
@@ -66,8 +66,7 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalFunctions"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="54"/>
-        <CursorPos X="49" Y="81"/>
+        <CursorPos X="3" Y="9"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit5>
@@ -79,8 +78,8 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Dlg_MPSettings"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="19"/>
-        <CursorPos X="26" Y="41"/>
+        <TopLine Value="79"/>
+        <CursorPos X="5" Y="19"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>

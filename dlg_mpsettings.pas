@@ -17,12 +17,6 @@ const
   SampleRateInts  : array[TSampleRate] of Integer = (32000,44100,48000,96000,192000);
 
 type
-  TSettings = packed record
-    MyTVSpeed       : Single;
-    OutSampleRate   : Integer;
-    CubicAudioSynth : Boolean;
-  end;
-
   { TMPSettings }
 
   TMPSettings = class(TForm)
@@ -38,7 +32,6 @@ type
     procedure ResetSettings;
 
   public
-    MySettings     : TSettings;
 
     procedure UpdateInterfaceSettings;
 
