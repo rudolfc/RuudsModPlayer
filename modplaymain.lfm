@@ -41,6 +41,7 @@ object ModMain: TModMain
     Top = 8
     Width = 623
     Anchors = [akTop, akLeft, akRight, akBottom]
+    Enabled = False
     ItemHeight = 0
     MultiSelect = True
     ParentFont = False
@@ -184,6 +185,31 @@ object ModMain: TModMain
     Anchors = [akLeft, akBottom]
     Caption = 'Cmd debug'
     TabOrder = 15
+  end
+  object linear_synth: TRadioButton
+    Left = 336
+    Height = 19
+    Top = 400
+    Width = 123
+    Caption = 'Linear interpolation'
+    TabOrder = 16
+  end
+  object cubic_synth: TRadioButton
+    Left = 336
+    Height = 19
+    Top = 418
+    Width = 122
+    Caption = 'Cubic interpolation'
+    TabOrder = 17
+  end
+  object Label2: TLabel
+    Left = 336
+    Height = 15
+    Top = 386
+    Width = 87
+    Caption = 'Audio Synthesis:'
+    ParentColor = False
+    ParentFont = False
   end
   object MainMenu1: TMainMenu
     Left = 96

@@ -20,6 +20,7 @@ type
   TSettings = packed record
     MyTVSpeed       : Single;
     OutSampleRate   : Integer;
+    CubicAudioSynth : Boolean;
   end;
 
   { TMPSettings }
@@ -120,6 +121,8 @@ begin
     MyTVSpeed     := PALSpeed;
     (* we use CD quality output (44.1kHz @ 16bit, two channels *)
     OutSampleRate := 44100;
+    (* we go for best quality audio synthesizing *)
+    CubicAudioSynth := True;
   end;
 end;
 

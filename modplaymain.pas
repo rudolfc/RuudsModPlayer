@@ -166,10 +166,13 @@ Type
     Ch3On: TCheckBox;
     Ch4On: TCheckBox;
     CbSongDebug: TCheckBox;
+    Label2: TLabel;
     LRInterMix: TCheckBox;
     Label1: TLabel;
     MenuItem1: TMenuItem;
     menuMPSettings: TMenuItem;
+    linear_synth: TRadioButton;
+    cubic_synth: TRadioButton;
     SongStartPos: TEdit;
     NextSmp: TAction;
     PrevSmp: TAction;
@@ -508,6 +511,7 @@ var
   WinVer  : Single;
   {$ENDIF}
 begin
+  cubic_synth.Checked := True;
   MyAppStarting := True;
   WaveOutErrReported := False;
 
@@ -2421,8 +2425,14 @@ begin
       (* Note: ChkDoPortaVibrato just might have updated MySample2 just now! *)
       LastInSample := MySample2;
 
-      if true then
+      if cubic_synth.Checked then
       begin
+        if not MPSettings.MySettings.CubicAudioSynth then
+        begin
+          RunDecInfo.Items.Insert(0,'Switched to Cubic interpolation');
+          MPSettings.MySettings.CubicAudioSynth := True;
+        end;
+
         (* Execute cubic interpolation,
            which has 4 input points: signal goes -through- control points: so amplitude stays same to input signal)
            https://www.paulinternet.nl/?page=bicubic
@@ -2501,10 +2511,17 @@ begin
       end
       else
       begin
+        if MPSettings.MySettings.CubicAudioSynth then
+        begin
+          RunDecInfo.Items.Insert(0,'Switched to Linear interpolation');
+          MPSettings.MySettings.CubicAudioSynth := False;
+        end;
+
         (* Qubic interpolation implies waveform 'overshoots' when input waveforms clip:
            Accomodate for that so our restored/improved waveforms are mostly not clipped again.
            Also using this for the linear interpolation to keep it's volume comparable. *)
-        QFAmp := 0.80;
+        QFAmp := 0.85;
+
         (* Determine the upsampling value step per resulting full sample *)
         MySampleStep := (MySample2 - MySample1) / MyInSmpUp;
         (* we 'play' 'InSmpUpRemain' time of the old sample, combined with '1-InSmpUpRemain' of the new sample *)
