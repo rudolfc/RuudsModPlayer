@@ -41,7 +41,6 @@ object ModMain: TModMain
     Top = 8
     Width = 623
     Anchors = [akTop, akLeft, akRight, akBottom]
-    Enabled = False
     ItemHeight = 0
     MultiSelect = True
     ParentFont = False

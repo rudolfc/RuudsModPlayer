@@ -719,6 +719,7 @@ begin
   (* Activate Wave file writer if requested *)
   CBSaveWave.Enabled := False;
   if CBSaveWave.Checked then StartWaveFile(MyOpenInFile + '.wav');
+  RunDecInfo.Enabled := False;
 
   if StoppingMySong then
   begin (* Start song fresh (so no resume here) *)
@@ -1686,6 +1687,7 @@ begin
   (* Activate Wave file writer if requested *)
   CBSaveWave.Enabled := False;
   if CBSaveWave.Checked then StartWaveFile(MyOutFileName);
+  RunDecInfo.Enabled := False;
 
   with MySampleLogic[1] do
   begin
@@ -1842,6 +1844,7 @@ begin
   (* End Wave file writer if it was busy *)
   if CBSaveWave.Checked then CompleteWaveFile;
   CBSaveWave.Enabled := True;
+  RunDecInfo.Enabled := True;
 end;
 
 function TModMain.MixAndOutputSamples(PlayRaw: Boolean): Boolean;
