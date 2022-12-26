@@ -2505,20 +2505,10 @@ begin
                   3.0*(SmpB-SmpC) +
                     SmpD - SmpA)))) * QFAmp;
           (* Prevent signal polarity inversion when clipping occurs *)
-          if MyTmpSample >  32767 then
-          begin
-            RunDecInfo.Items.Insert(0,'Clipping at signal max');
-            MyTmpSample := 32767;
-          end;
-          if MyTmpSample < -32768 then
-          begin
-            RunDecInfo.Items.Insert(0,'Clipping at signal min');
-            MyTmpSample := -32768;
-          end;
+          if MyTmpSample >  32767 then MyTmpSample := 32767;
+          if MyTmpSample < -32768 then MyTmpSample := -32768;
           MyChBuf[MyCh][OutCnt] := Round(MyTmpSample);
-          if smpX < 0 then RunDecInfo.Items.Insert(0,'X < 0');  //yeah remove
-          if smpX > 1 then RunDecInfo.Items.Insert(0,'X > 1');  //yeah remove
-          smpX := SmpX + 1 / MyInSmpUp;
+          SmpX := SmpX + 1 / MyInSmpUp;
           SmpVibUpCnt := SmpVibUpCnt - 1;
           Inc(OutCnt);
         end;
