@@ -629,8 +629,8 @@ end;
 
 procedure TModMain.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  StopPlaying;
   MyAppClosing := True;
+  StopPlaying;
 
   while not AllBufsDone do sleep(5);
 
@@ -647,6 +647,7 @@ begin
   CompleteWaveFile;
 
   (* Force us seeing errors if we still reference RunDecInfo somewhere at this time (debug help) *)
+  RunDecInfo.Clear;
   RunDecInfo.Free;
   RunDecInfo := nil;
 end;
@@ -1816,6 +1817,7 @@ procedure TModMain.HandleNewFile(MyFile: String);
 begin
   (* stop a possible playing song first *)
   StopPlaying;
+  Sleep(100);
 
   if not LoadFile(MyFile) then
   begin
@@ -1843,8 +1845,11 @@ begin
 
   (* End Wave file writer if it was busy *)
   if CBSaveWave.Checked then CompleteWaveFile;
-  CBSaveWave.Enabled := True;
-  RunDecInfo.Enabled := True;
+  if not MyAppClosing then
+  begin
+    CBSaveWave.Enabled := True;
+    RunDecInfo.Enabled := True;
+  end;
 end;
 
 function TModMain.MixAndOutputSamples(PlayRaw: Boolean): Boolean;

@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="11"/>
     <BuildModes Active="Default"/>
-    <Units Count="28">
+    <Units Count="30">
       <Unit0>
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="1925"/>
-        <CursorPos X="8" Y="1947"/>
+        <TopLine Value="624"/>
+        <CursorPos Y="651"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -219,7 +219,7 @@
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\include\customlistbox.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="251"/>
-        <CursorPos Y="274"/>
+        <CursorPos X="53" Y="277"/>
         <UsageCount Value="12"/>
       </Unit24>
       <Unit25>
@@ -241,10 +241,24 @@
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32wsforms.pp"/>
         <UnitName Value="Win32WSForms"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="335"/>
-        <CursorPos X="42" Y="358"/>
+        <TopLine Value="365"/>
+        <CursorPos Y="387"/>
         <UsageCount Value="12"/>
       </Unit27>
+      <Unit28>
+        <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\inc\objpas.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="615"/>
+        <CursorPos Y="638"/>
+        <UsageCount Value="10"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32callback.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2492"/>
+        <CursorPos Y="2514"/>
+        <UsageCount Value="10"/>
+      </Unit29>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="-1"/>
