@@ -351,11 +351,11 @@ BEGIN
   if StoppingMySong or not MyResult then
     while not AllBufsDone do sleep(5);
 
-  (* We're done (note: 'StopPlaying' stops the timer again) *)
-  if not MyAppClosing then IO_Timer.Enabled := True;
-
-  (* Check/execute Stop *)
-  if StoppingMySong or MyAppClosing then StopPlaying;
+  (* We're done (note: 'StopPlaying' stops the timer) *)
+  if not StoppingMySong and not MyAppClosing then
+    IO_Timer.Enabled := True
+  else
+    StopPlaying;
 END;
 
 procedure TModMain.ParseSpeedControl;

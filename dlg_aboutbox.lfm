@@ -37,7 +37,7 @@ object AboutBox: TAboutBox
     Height = 21
     Top = 80
     Width = 107
-    Caption = '(c) 2019 - 2022'
+    Caption = '(c) 2019 - 2023'
     Font.Height = -16
     ParentColor = False
     ParentFont = False
