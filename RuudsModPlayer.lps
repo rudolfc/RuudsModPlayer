@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="761"/>
-        <CursorPos X="12" Y="736"/>
+        <TopLine Value="2392"/>
+        <CursorPos X="64" Y="2415"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -78,8 +78,8 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Dlg_MPSettings"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="53"/>
-        <CursorPos X="8" Y="76"/>
+        <TopLine Value="35"/>
+        <CursorPos X="48" Y="75"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>

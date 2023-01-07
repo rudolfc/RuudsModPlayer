@@ -1817,7 +1817,6 @@ procedure TModMain.HandleNewFile(MyFile: String);
 begin
   (* stop a possible playing song first *)
   StopPlaying;
-  Sleep(100);
 
   if not LoadFile(MyFile) then
   begin
@@ -1840,6 +1839,8 @@ begin
     StoppingMySong := True;
   end;
   PlayingRaw := False;
+  (* Give the possibly running isr 'ExecTick' time to respond to the stop signal we just gave *)
+  Sleep(100);
 
   if WaveOutIsOpen then waveOutReset(PMyWaveOutDev^); //Also marks all buffers as 'WHDR_DONE'
 
