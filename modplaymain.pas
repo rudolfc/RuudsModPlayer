@@ -1853,8 +1853,11 @@ begin
   end;
   PlayingRaw := False;
   (* Wait for the currently playing audiobuffer to be done only *)
-  while not AllBufsDone(True) do sleep(5);
-
+  while not AllBufsDone(True) do
+  begin
+    Application.processmessages;
+    sleep(5);
+  end;
   if WaveOutIsOpen then waveOutReset(PMyWaveOutDev^); //Also marks all buffers as 'WHDR_DONE'
 
   (* End Wave file writer if it was busy *)

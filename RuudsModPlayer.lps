@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="1842"/>
-        <CursorPos X="98" Y="1858"/>
+        <TopLine Value="1821"/>
+        <CursorPos Y="1859"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -78,8 +78,8 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Dlg_MPSettings"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="35"/>
-        <CursorPos X="48" Y="75"/>
+        <TopLine Value="42"/>
+        <CursorPos X="27" Y="80"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
@@ -89,7 +89,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="2463"/>
         <CursorPos X="22" Y="2488"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="11"/>
       </Unit7>
       <Unit8>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32wscontrols.pp"/>
@@ -97,7 +97,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="171"/>
         <CursorPos Y="185"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="1"/>
       </Unit8>
       <Unit9>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\forms.pp"/>
@@ -105,35 +105,35 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1466"/>
         <CursorPos X="15" Y="1481"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="1"/>
       </Unit9>
       <Unit10>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32object.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="403"/>
         <CursorPos Y="413"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit10>
       <Unit11>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\inc\systemh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="697"/>
         <CursorPos X="11" Y="713"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit11>
       <Unit12>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32listsl.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="121"/>
         <CursorPos Y="137"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit12>
       <Unit13>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\include\buttoncontrol.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="37"/>
         <CursorPos X="47" Y="52"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit13>
       <Unit14>
         <Filename Value="C:\Users\RudolfC\AppData\Local\Temp\7zO0342D149\modplaymain.pas"/>
@@ -141,7 +141,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="695"/>
         <CursorPos X="25" Y="707"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit14>
       <Unit15>
@@ -150,7 +150,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="799"/>
         <CursorPos Y="820"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit15>
       <Unit16>
@@ -158,7 +158,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="670"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit16>
       <Unit17>
@@ -166,7 +166,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="687"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit17>
       <Unit18>
@@ -174,7 +174,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="786"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit18>
       <Unit19>
@@ -182,7 +182,7 @@
         <UnitName Value="ModPlayMain"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="783"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit19>
       <Unit20>
@@ -190,21 +190,21 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="131"/>
         <CursorPos X="19" Y="148"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit20>
       <Unit21>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\inc\text.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="162"/>
         <CursorPos X="32" Y="179"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit21>
       <Unit22>
         <Filename Value="modplaysettings.pas"/>
         <UnitName Value="ModPlaySettings"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="35" Y="13"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit22>
       <Unit23>
@@ -212,7 +212,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="30"/>
         <CursorPos X="29" Y="57"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="10"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit23>
       <Unit24>
@@ -220,14 +220,14 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="251"/>
         <CursorPos X="53" Y="277"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="11"/>
       </Unit24>
       <Unit25>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\include\wincontrol.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="7912"/>
         <CursorPos Y="7935"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit25>
       <Unit26>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\lclmessageglue.pas"/>
@@ -235,7 +235,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="90"/>
         <CursorPos Y="112"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="11"/>
       </Unit26>
       <Unit27>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32wsforms.pp"/>
@@ -243,21 +243,21 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="365"/>
         <CursorPos Y="387"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="11"/>
       </Unit27>
       <Unit28>
         <Filename Value="C:\fpcupdeluxe\fpcsrc\rtl\inc\objpas.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="615"/>
         <CursorPos Y="638"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit28>
       <Unit29>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32callback.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="2492"/>
         <CursorPos Y="2514"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit29>
     </Units>
     <General>
