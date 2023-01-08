@@ -9,7 +9,7 @@
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <CursorPos X="11" Y="19"/>
+        <CursorPos Y="22"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="2392"/>
-        <CursorPos X="64" Y="2415"/>
+        <TopLine Value="1842"/>
+        <CursorPos X="98" Y="1858"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -87,9 +87,9 @@
         <Filename Value="C:\fpcupdeluxe\fpcsrc\packages\winunits-base\src\mmsystem.pp"/>
         <UnitName Value="MMSystem"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="1112"/>
-        <CursorPos X="2" Y="1140"/>
-        <UsageCount Value="6"/>
+        <TopLine Value="2463"/>
+        <CursorPos X="22" Y="2488"/>
+        <UsageCount Value="12"/>
       </Unit7>
       <Unit8>
         <Filename Value="C:\fpcupdeluxe\lazarus\lcl\interfaces\win32\win32wscontrols.pp"/>

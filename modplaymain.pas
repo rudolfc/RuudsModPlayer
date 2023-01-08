@@ -256,7 +256,7 @@ Type
     function  MixAndOutputSamples(PlayRaw: Boolean): Boolean;
     function  PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
                          MyRptLen: Integer = 0; MyRptStart: Integer = 0; AmigaSpeed: Word = 428; FineTune: ShortInt = 0): Boolean;
-    Function  AllBufsDone: Boolean;
+    Function  AllBufsDone(Aborting: Boolean): Boolean;
     procedure OpenAssociatedFile;
     procedure OpenWaveOutput;
     procedure CloseWaveOutput;
@@ -349,7 +349,7 @@ BEGIN
 
   (* If we reached the end of the song let the currently queued buffers play out *)
   if StoppingMySong or not MyResult then
-    while not AllBufsDone do sleep(5);
+    while not AllBufsDone(False) do sleep(5);
 
   (* We're done (note: 'StopPlaying' stops the timer) *)
   if not StoppingMySong and not MyAppClosing then
@@ -632,7 +632,7 @@ begin
   MyAppClosing := True;
   StopPlaying;
 
-  while not AllBufsDone do sleep(5);
+  while not AllBufsDone(True) do sleep(5);
 
   if WaveOutIsOpen then
   begin
@@ -1744,7 +1744,7 @@ begin
   if PlayingRaw then
   begin
     (* Wait for sample end *)
-    while not AllBufsDone do
+    while not AllBufsDone(False) do
     begin
       sleep(5);
       application.ProcessMessages;
@@ -1758,15 +1758,28 @@ begin
 end;
 
 
-Function TModMain.AllBufsDone: Boolean;
+Function TModMain.AllBufsDone(Aborting: Boolean): Boolean;
 var
   a: Integer;
 begin
   AllBufsDone := True;
 
   if WaveOutIsOpen then
-    for a := 0 to NumAudioBufs-1 do
+  begin
+    if Aborting then
+    begin
+      (* Just checking the currently running buffer to be finished *)
+      if BufNr = 0 then
+        a := NumAudioBufs-1
+      else
+        a := BufNr - 1;
+
       if pheader[a]^.dwFlags and WHDR_DONE = 0 then AllBufsDone := False;
+    end
+    else
+      for a := 0 to NumAudioBufs-1 do
+        if pheader[a]^.dwFlags and WHDR_DONE = 0 then AllBufsDone := False;
+  end;
 end;
 
 
@@ -1839,8 +1852,8 @@ begin
     StoppingMySong := True;
   end;
   PlayingRaw := False;
-  (* Give the possibly running isr 'ExecTick' time to respond to the stop signal we just gave *)
-  Sleep(100);
+  (* Wait for the currently playing audiobuffer to be done only *)
+  while not AllBufsDone(True) do sleep(5);
 
   if WaveOutIsOpen then waveOutReset(PMyWaveOutDev^); //Also marks all buffers as 'WHDR_DONE'
 
