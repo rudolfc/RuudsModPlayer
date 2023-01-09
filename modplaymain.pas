@@ -1581,6 +1581,7 @@ end;
 
 procedure TModMain.BtnStopSongClick(Sender: TObject);
 begin
+  if not PlayingRaw then MySongPaused := False;
   StopPlaying;
 end;
 
