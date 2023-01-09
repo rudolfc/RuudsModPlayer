@@ -1592,6 +1592,7 @@ var
   MyOutFileName, s : String;
 begin
   if not MyMediaRec.FileLoaded then exit;
+  MySongPaused := False;
   StopPlaying;
 
   (* mute non-used channels to be sure *)
@@ -1847,8 +1848,8 @@ begin
 
   if not PlayingRaw then
   begin
+    if not MySongPaused then BtnPlaySong.Caption := 'Play song';
     MySongPaused := True;
-    BtnPlaySong.Caption := 'Play song';
     StoppingMySong := True;
   end;
   PlayingRaw := False;
