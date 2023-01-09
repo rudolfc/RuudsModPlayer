@@ -2788,10 +2788,11 @@ begin
           RptLength := 0;
         end;
     end;
-    (* we only support 4 channel fileformats for now *)
-    if not Supported then
+    (* we only support 4 channel fileformats for now, also prevent div by zero on wrongly 'detected' orig. format files *)
+    if not Supported or (OrigFormatFile and (IgnSetNrOfPats = 0)) then
     begin
       CloseFile(TF);
+      FileID:= '    ';
       FrmMediaInfo.MyUpdate;
       Exit;
     end;
