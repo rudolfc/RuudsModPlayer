@@ -202,6 +202,7 @@ Type
     procedure menuMPSettingsClick(Sender: TObject);
     procedure ParseSpeedControl;
     procedure ParseRunControl;
+    procedure SetMPState(NewState: MP_State);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure MenuAboutClick(Sender: TObject);
@@ -225,7 +226,6 @@ Type
     TickSpeed      : Byte;
     TmrInterval    : Single;
     MasterVolume   : Integer;
-    PlayingRaw     : Boolean;
     BufNr          : Byte;
     MySongStartPos : Integer;
     MyWaveFile     : FILE;
@@ -256,7 +256,7 @@ Type
     function  MixAndOutputSamples(PlayRaw: Boolean): Boolean;
     function  PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
                          MyRptLen: Integer = 0; MyRptStart: Integer = 0; AmigaSpeed: Word = 428; FineTune: ShortInt = 0): Boolean;
-    Function  AllBufsDone(Aborting: Boolean): Boolean;
+    Function  AllBufsDone: Boolean;
     procedure OpenAssociatedFile;
     procedure OpenWaveOutput;
     procedure CloseWaveOutput;
@@ -294,16 +294,7 @@ var
   DoUpdate : Boolean;
   MyResult : Boolean;
 BEGIN
-  (* If we were started by File Association then play the (already loaded) file *)
-  if MyAppStarting and MyMediaRec.FileLoaded then
-  begin
-    MyAppStarting := False;
-    MySongPaused := False;
-    PlayMySong;
-    Exit;
-  end;
-
-  if MySongPaused or StoppingMySong or MyAppClosing then exit;
+  if (ModPlayerState < MPPlaying) or MyAppClosing then exit;
   (* make sure we don't overtake ourselves *)
   IO_Timer.Enabled := False;
 
@@ -348,14 +339,17 @@ BEGIN
   end;
 
   (* If we reached the end of the song let the currently queued buffers play out *)
-  if StoppingMySong or not MyResult then
-    while not AllBufsDone(False) do sleep(5);
+  if (ModPlayerState = MPStopped) or not MyResult then
+    while not AllBufsDone do sleep(5);
 
   (* We're done (note: 'StopPlaying' stops the timer) *)
-  if not StoppingMySong and not MyAppClosing then
+  if (ModPlayerState <> MPStopped) and not MyAppClosing then
     IO_Timer.Enabled := True
   else
+  begin
+    SetMPState(MPStopped);
     StopPlaying;
+  end;
 END;
 
 procedure TModMain.ParseSpeedControl;
@@ -504,7 +498,13 @@ begin
     end;
 
   (* If all channels finished playing signal complete stop. *)
-  if ChSongDone = MyMediaRec.Channels then StoppingMySong := True;
+  if ChSongDone = MyMediaRec.Channels then SetMPState(MPStopped);
+end;
+
+procedure TModMain.SetMPState(NewState: MP_State);
+begin
+  OldModPlayerState := ModPlayerState;
+  ModPlayerState := NewState;
 end;
 
 procedure TModMain.FormCreate(Sender: TObject);
@@ -516,7 +516,6 @@ var
 begin
   cubic_synth.Checked := True;
   MyCubicSynth := True;
-  MyAppStarting := True;
   WaveOutErrReported := False;
 
   for a := 0 to NumAudioBufs-1 do
@@ -527,13 +526,13 @@ begin
   new(PMywfx);
   new(pMyWaveOutDev);
   MyAppClosing := False;
-  PlayingRaw := False;
 
   MyMediaRec.FileLoaded := False;
   MyFileHeader.FileID:= '    ';
   TickSpeed := DefaultTckSpeed;
   MasterVolume := 64;
-  MySongPaused := False;
+  ModPlayerState := MPStopped;
+  OldModPlayerState := MPStopped;
   WaveOutIsOpen := False;
   BufNr := 0;
   MySongStartPos := 0;
@@ -572,8 +571,8 @@ begin
   begin
     (* Only handle the first parameter given (behind our own filename) *)
     HandleNewFile(ParamStr(1));
-    (* We let the Timer callback hit 'Play' *)
-    IO_Timer.Enabled := True;
+    SetMPState(MPPlaying);
+    PlayMySong;
   end;
 end;
 
@@ -630,9 +629,10 @@ end;
 procedure TModMain.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
   MyAppClosing := True;
+  SetMPState(MPStopped);
   StopPlaying;
 
-  while not AllBufsDone(True) do sleep(5);
+  while not AllBufsDone do sleep(5);
 
   if WaveOutIsOpen then
   begin
@@ -672,7 +672,11 @@ end;
 procedure TModMain.BtnPlaySongClick(Sender: TObject);
 begin
   if not MyMediaRec.FileLoaded then exit;
-  MySongPaused := not MySongPaused;
+
+  if ModPlayerState = MPPlaying then
+    SetMPState(MPPaused)
+  else
+    SetMPState(MPPlaying);
 
   PlayMySong;
 end;
@@ -698,22 +702,19 @@ begin
       RunDecInfo.Items.Insert(0, 'Wave Output re-opened successfully..');
   end;
 
-  if MySongPaused then
+  if ModPlayerState = MPPaused then
   begin (* Pause song *)
     StopPlaying;
-    StoppingMySong := False;
     BtnPlaySong.Caption := 'Cont. song';
     exit;
-  end
-  else
-  begin (* Resume song *)
-    (* still playing 'raw' sample(s): quit that first *)
-    if PlayingRaw then
-    begin
-      StopPlaying;
-      if WaveOutIsOpen then
-        waveOutReset(PMyWaveOutDev^); (* Also marks all buffers as 'WHDR_DONE', thereby also ending PlayRaw. *)
-    end;
+  end;
+
+  (* still playing 'raw' sample(s): quit that first *)
+  if OldModPlayerState = MPPlayingRaw then
+  begin
+    StopPlaying;
+    if WaveOutIsOpen then
+      waveOutReset(PMyWaveOutDev^); (* Also marks all buffers as 'WHDR_DONE', thereby also ending PlayRaw. *)
   end;
 
   BtnPlaySong.Caption := 'Pause song';
@@ -722,9 +723,8 @@ begin
   if CBSaveWave.Checked then StartWaveFile(MyOpenInFile + '.wav');
   RunDecInfo.Enabled := False;
 
-  if StoppingMySong then
+  if OldModPlayerState <> MPPaused then
   begin (* Start song fresh (so no resume here) *)
-    StoppingMySong := False;
     if CBSongDebug.Checked or CBPatDebug.Checked then RunDecInfo.Items.Clear;
 
     (* No Pattern Jump occurred *)
@@ -747,7 +747,7 @@ begin
         begin
           inc(MySongPos);
           (* Fail-safe to not read outside the song patterns array! (Song end reached, stopping song right away.) *)
-          if MySongPos >= MyFileHeader.SongLength then StoppingMySong := True;
+          if MySongPos >= MyFileHeader.SongLength then SetMPState(MPStopped);
           (* Select song starting pattern table *)
           MyPatTabNr := MyFileHeader.Patterns[MySongPos];
         end;
@@ -1226,7 +1226,7 @@ begin
   (* In original format files only the loop-area is played in looping samples.. *)
   if OrigFormatFile and (RepeatLength > 2) then Nr9Offset := RepeatStart;
 
-  if MyAppClosing or StoppingMySong or MySongPaused then
+  if MyAppClosing then
   begin
     Result := False;
     exit;
@@ -1334,8 +1334,7 @@ begin
 
     (* Normal song play.. *)
     if (MyPatTabNr <= MyFileHeader.IgnSetNrOfPats - 1) and
-       (MySongPos  < MyFileHeader.SongLength) and not StoppingMySong and
-       not MyAppClosing then
+       (MySongPos < MyFileHeader.SongLength) and not MyAppClosing then
     begin
       if not MyPatTabRunning then
       begin
@@ -1352,7 +1351,7 @@ begin
         if not MyPatBreak then MyPatTabPos := 0;   //(MyPatTabPos = 'row')
         MyPatBreak := False;
       end;
-      if (MyPatTabPos <= 63) and not StoppingMySong then
+      if (MyPatTabPos <= 63) then
       begin
         MyPatTabRunning := True;
 
@@ -1581,7 +1580,7 @@ end;
 
 procedure TModMain.BtnStopSongClick(Sender: TObject);
 begin
-  if not PlayingRaw then MySongPaused := False;
+  SetMPState(MPStopped);
   StopPlaying;
 end;
 
@@ -1593,7 +1592,7 @@ var
   MyOutFileName, s : String;
 begin
   if not MyMediaRec.FileLoaded then exit;
-  MySongPaused := False;
+  SetMPState(MPStopped);
   StopPlaying;
 
   (* mute non-used channels to be sure *)
@@ -1696,10 +1695,10 @@ begin
   begin
     if CBSample.ItemIndex <= 0 then
     begin
-      PlayingRaw := True;
+      SetMPState(MPPlayingRaw);
 
       (* play full sample once *)
-      while (MyInBufCnt < MyTotalSampleSize) and PlayingRaw do
+      while (MyInBufCnt < MyTotalSampleSize) and (ModPlayerState = MPPlayingRaw) do
       begin
         PlaySample(1, MySamplesPtr, MyTotalSampleSize, 0, 1, 0, 428, 0); (* 428 denotes C2 (C, 2nd octave) *)
         MixAndOutputSamples(True);
@@ -1715,7 +1714,7 @@ begin
       for d := 1 to CBSample.ItemIndex - 1 do
         MyRawOffset := MyRawOffset + MySampleInfo[d-1].Length; //is really OK like this!
 
-      PlayingRaw := True;
+      SetMPState(MPPlayingRaw);
       with MySampleInfo[CBSample.ItemIndex-1] do
       begin
         (* Only play really existing samples *)
@@ -1731,7 +1730,7 @@ begin
             MyRawRptLen := 0; (* force no repeat *)
 
           (* play full sample including repeats (if requested) *)
-          while (MyInBufCnt < Length) and PlayingRaw do
+          while (MyInBufCnt < Length) and (ModPlayerState = MPPlayingRaw) do
           begin
             PlaySample(1, MySamplesPtr + MyRawOffset, Length, 0, MyRawRptLen, RptStart, 428, FineTune); (* 428 denotes C2 (C, 2nd octave) *)
             MixAndOutputSamples(True);
@@ -1743,45 +1742,32 @@ begin
     end;
   end;
 
-  if PlayingRaw then
+  if ModPlayerState = MPPlayingRaw then
   begin
     (* Wait for sample end *)
-    while not AllBufsDone(False) do
+    while not AllBufsDone do
     begin
       sleep(5);
       application.ProcessMessages;
     end;
-    if PlayingRaw then
+    if ModPlayerState = MPPlayingRaw then
     begin
-      PlayingRaw := False;
+      SetMPState(MPStopped);
       StopPlaying; //note might be done by PlaySong!
     end;
   end;
 end;
 
 
-Function TModMain.AllBufsDone(Aborting: Boolean): Boolean;
+Function TModMain.AllBufsDone: Boolean;
 var
   a: Integer;
 begin
   AllBufsDone := True;
 
   if WaveOutIsOpen then
-  begin
-    if Aborting then
-    begin
-      (* Just checking the currently running buffer to be finished *)
-      if BufNr = 0 then
-        a := NumAudioBufs-1
-      else
-        a := BufNr - 1;
-
+    for a := 0 to NumAudioBufs-1 do
       if pheader[a]^.dwFlags and WHDR_DONE = 0 then AllBufsDone := False;
-    end
-    else
-      for a := 0 to NumAudioBufs-1 do
-        if pheader[a]^.dwFlags and WHDR_DONE = 0 then AllBufsDone := False;
-  end;
 end;
 
 
@@ -1799,7 +1785,7 @@ procedure TModMain.FormDropFiles(Sender: TObject;
   const FileNames: array of String);
 begin
   HandleNewFile(FileNames[0]);
-  MySongPaused := False;
+  SetMPState(MPPlaying);
   PlayMySong;
 end;
 
@@ -1831,6 +1817,7 @@ end;
 procedure TModMain.HandleNewFile(MyFile: String);
 begin
   (* stop a possible playing song first *)
+  SetMPState(MPStopped);
   StopPlaying;
 
   if not LoadFile(MyFile) then
@@ -1847,15 +1834,10 @@ procedure TModMain.StopPlaying;
 begin
   IO_Timer.Enabled := False;
 
-  if not PlayingRaw then
-  begin
-    if not MySongPaused then BtnPlaySong.Caption := 'Play song';
-    MySongPaused := True;
-    StoppingMySong := True;
-  end;
-  PlayingRaw := False;
+  if ModPlayerState <> MPPaused then BtnPlaySong.Caption := 'Play song';
+
   (* Wait for the currently playing audiobuffer to be done only *)
-  while not AllBufsDone(True) do
+  while not AllBufsDone do
   begin
     Application.processmessages;
     sleep(5);
@@ -1864,7 +1846,7 @@ begin
 
   (* End Wave file writer if it was busy *)
   if CBSaveWave.Checked then CompleteWaveFile;
-  if not MyAppClosing then
+  if not MyAppClosing and (ModPlayerState < MPPlaying) then
   begin
     CBSaveWave.Enabled := True;
     RunDecInfo.Enabled := True;
@@ -2430,7 +2412,7 @@ begin
     OutCnt := MyConBufFill;
     while OutCnt < MyOutBufLen do
     begin
-      if MyAppClosing or (MySongPaused and not PlayingRaw) then
+      if MyAppClosing then
       begin
         Result := False;
         exit;

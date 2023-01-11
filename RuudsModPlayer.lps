@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="11"/>
     <BuildModes Active="Default"/>
-    <Units Count="30">
+    <Units Count="32">
       <Unit0>
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -22,8 +22,8 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="2764"/>
-        <CursorPos X="107" Y="2791"/>
+        <TopLine Value="319"/>
+        <CursorPos X="57" Y="338"/>
         <UsageCount Value="201"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
@@ -56,8 +56,7 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalVars"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="10"/>
-        <CursorPos X="18" Y="40"/>
+        <CursorPos X="47" Y="9"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
@@ -79,7 +78,7 @@
         <UnitName Value="Dlg_MPSettings"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="42"/>
-        <CursorPos X="27" Y="80"/>
+        <CursorPos X="8" Y="76"/>
         <UsageCount Value="200"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
@@ -259,6 +258,22 @@
         <CursorPos Y="2514"/>
         <UsageCount Value="9"/>
       </Unit29>
+      <Unit30>
+        <Filename Value="globalvars - kopie.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="83"/>
+        <CursorPos X="60" Y="117"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="modplaymain - kopie.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1798"/>
+        <CursorPos X="31" Y="1710"/>
+        <UsageCount Value="13"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit31>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="-1"/>

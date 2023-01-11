@@ -6,6 +6,8 @@ uses
   Classes, SysUtils;
 
 type
+  MP_State   = (MPStopped, MPPaused, MPPlaying, MPPlayingRaw);
+
   TModMediaRec = packed RECORD
                  FileLoaded     : BOOLEAN;
                  FileName       : string[200];
@@ -109,15 +111,14 @@ var
   MyTotalPatternSize,
   MyTotalSampleSize        : Integer;
   MyAppClosing,
-  MyAppStarting,
-  StoppingMySong,
   OrigFormatFile,
-  MySongPaused,
   WaveOutIsOpen,
   WaveOutErrReported       : Boolean;
   OrigFmtTmrSpeed          : Single;
   MySampleInfo             : array [0..30] of TModPlaySampleInfo;
   MySettings               : TSettings;
+  ModPlayerState,
+  OldModPlayerState        : MP_State;
 
 implementation
 
