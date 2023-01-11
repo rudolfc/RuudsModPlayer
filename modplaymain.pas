@@ -673,12 +673,20 @@ procedure TModMain.BtnPlaySongClick(Sender: TObject);
 begin
   if not MyMediaRec.FileLoaded then exit;
 
-  if ModPlayerState = MPPlaying then
-    SetMPState(MPPaused)
-  else
-    SetMPState(MPPlaying);
+  (* still playing 'raw' sample(s): quit that first *)
+  if ModPlayerState = MPPlayingRaw then StopPlaying;
 
-  PlayMySong;
+  if ModPlayerState = MPPlaying then
+  begin
+    SetMPState(MPPaused);
+    StopPlaying;
+    BtnPlaySong.Caption := 'Cont. song';
+  end
+  else
+  begin
+    SetMPState(MPPlaying);
+    PlayMySong;
+  end;
 end;
 
 procedure TModMain.cubic_synthChange(Sender: TObject);
@@ -700,21 +708,6 @@ begin
     OpenWaveOutput;
     if WaveOutIsOpen then
       RunDecInfo.Items.Insert(0, 'Wave Output re-opened successfully..');
-  end;
-
-  if ModPlayerState = MPPaused then
-  begin (* Pause song *)
-    StopPlaying;
-    BtnPlaySong.Caption := 'Cont. song';
-    exit;
-  end;
-
-  (* still playing 'raw' sample(s): quit that first *)
-  if OldModPlayerState = MPPlayingRaw then
-  begin
-    StopPlaying;
-    if WaveOutIsOpen then
-      waveOutReset(PMyWaveOutDev^); (* Also marks all buffers as 'WHDR_DONE', thereby also ending PlayRaw. *)
   end;
 
   BtnPlaySong.Caption := 'Pause song';
@@ -1785,8 +1778,7 @@ procedure TModMain.FormDropFiles(Sender: TObject;
   const FileNames: array of String);
 begin
   HandleNewFile(FileNames[0]);
-  SetMPState(MPPlaying);
-  PlayMySong;
+  BtnPlaySongClick(self);
 end;
 
 procedure TModMain.menuMPSettingsClick(Sender: TObject);
