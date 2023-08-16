@@ -9,10 +9,9 @@
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <CursorPos Y="9"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="69" Y="7"/>
         <UsageCount Value="200"/>
-        <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
       <Unit1>
         <Filename Value="modplaymain.pas"/>
@@ -333,6 +332,9 @@
         <UsageCount Value="7"/>
       </Unit37>
     </Units>
+    <General>
+      <ActiveWindowIndexAtStart Value="-1"/>
+    </General>
     <JumpHistory HistoryIndex="-1"/>
     <RunParams>
       <FormatVersion Value="2"/>
