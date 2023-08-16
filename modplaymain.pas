@@ -5,13 +5,12 @@ interface
 uses
   LCLIntf, LCLType,
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Menus, Buttons,
-  ExtCtrls, StdCtrls, ActnList, MMSystem, FPTimer, GlobalVars;
+  ExtCtrls, StdCtrls, ActnList, Sdl, FPTimer, GlobalVars;
 
   { TModMain }
 
 Const
-  //fixme: Make below 2 settings user-selectable...
-  NumAudioBufs  = 3;     (* we use the 'double buffering' scheme *)
+  //fixme: Make below setting user-selectable...
   NumOutChans   = 2;     (* we output in stereo (mono is also an option) *)
 
   MaxNumChBufs    = 4;                      (* we support this much input channels (M.K. files have 4 channels) *)
@@ -157,6 +156,15 @@ Type
     MyOutBufLen     : Integer;
   end;
 
+  AudioCallbackData = packed record
+    Buffer  : PUInt8;
+    ReadPtr : Integer; // in samples per total of output channels
+    WritePtr: Integer; // in samples per total of output channels
+    BufSize : Integer; // in samples per total of output channels
+    Channels: Integer;
+    BufEmpty: Boolean;
+  End;
+
   TModMain = class(TForm)
     CBPatDebug: TCheckBox;
     CBCmdDebug: TCheckBox;
@@ -215,9 +223,8 @@ Type
 
   private
 
-    PHeader        : Array[0..NumAudioBufs-1] of PWaveHdr;
-    PMyWaveOutDev  : LPHWAVEOUT;
-    PMywfx         : PWaveFormatEx;
+    MyCircBufData  : AudioCallbackData;
+    PMywfx         : TSDL_AudioSpec;
     IO_Timer       : TFPTimer;
 
     MySongLogic    : Array[1..MaxNumChBufs] of TSongLogic;
@@ -226,7 +233,6 @@ Type
     TickSpeed      : Byte;
     TmrInterval    : Single;
     MasterVolume   : Integer;
-    BufNr          : Byte;
     MySongStartPos : Integer;
     MyWaveFile     : FILE;
     MyWaveHeader   : TWavHeader;
@@ -234,9 +240,15 @@ Type
     MyJmpBreak     : Integer;
     MyCubicSynth   : Boolean;
 
+  const
     (* the longest buffer getting used is @ 32PBM = 78mS * 31 ticks = 2418mS * Samples/sec. *)
-    MyChBuf      : Array[1..MaxNumChBufs, 0..  (1*78*31*MaxSampleRate div 1000)] of SmallInt; (* mono channel output buffers *)
-    MyConvBuf    : Array[0..NumAudioBufs-1, 0..(2*78*31*MaxSampleRate div 1000)] of SmallInt; (* Stereo mixed device buffers *)
+    MonoMaxBufSizeNeeded = 78*31*MaxSampleRate div 1000;
+    (* in samples, actual size used is set at approx. 0.2 Seconds in size *)
+    CircBufSize = 40000; //in samples
+  var
+    MyChBuf   : Array[1..MaxNumChBufs, 0..  (1*MonoMaxBufSizeNeeded)] of SmallInt; (* mono channel output buffers *)
+    MyConvBuf : Array[0..(2*MonoMaxBufSizeNeeded)] of SmallInt;                    (* Stereo mixed output buffer *)
+    MyCircBuf : Array[0..(4*CircBufSize)] of Uint8;                                (* Circular buffer interface to SDL *)
 
 
     procedure ExecTick(Sender: TObject);
@@ -248,7 +260,7 @@ Type
 
     Procedure ResetMyPattern(var MyPattern: TModPattern);
     function  StartWaveFile(FName: String): Boolean;
-    function  WriteWaveChunk(MyBuffer, MySize: Integer): Boolean;
+    function  WriteWaveChunk(MySize: Integer): Boolean;
     function  CompleteWaveFile: Boolean;
     function  LoadFile(MyFile: String): Boolean;
     procedure HandleNewFile(MyFile: String);
@@ -513,18 +525,12 @@ var
   {$IFDEF MSWINDOWS}
   WinVer  : Single;
   {$ENDIF}
+  SdlVerC : TSDL_version;
 begin
   cubic_synth.Checked := True;
   MyCubicSynth := True;
   WaveOutErrReported := False;
 
-  for a := 0 to NumAudioBufs-1 do
-  begin
-    new(PHeader[a]);
-    pheader[a]^.dwFlags := WHDR_DONE;
-  end;
-  new(PMywfx);
-  new(pMyWaveOutDev);
   MyAppClosing := False;
 
   MyMediaRec.FileLoaded := False;
@@ -534,7 +540,6 @@ begin
   ModPlayerState := MPStopped;
   OldModPlayerState := MPStopped;
   WaveOutIsOpen := False;
-  BufNr := 0;
   MySongStartPos := 0;
   TFileRec(MyWaveFile).Mode := fmClosed;
   MyOpenInFile := '';
@@ -543,6 +548,10 @@ begin
 
   (* use TFPTimer *)
   IO_Timer := TFPTimer.Create(nil);
+
+  SDL_VERSION(SdlVerC);
+  RunDecInfo.Items.Insert(0,
+    'SDL compile-time version ' + IntToStr(SdlVerC.major) + '.' + IntToStr(SdlVerC.minor) + '.' + IntToStr(SdlVerC.patch));
 
   {$IFDEF MSWINDOWS}
   RunDecInfo.Items.Insert(0, 'Windows version ' + IntToStr(Win32MajorVersion) + '.' + IntToStr(Win32MinorVersion));
@@ -576,26 +585,79 @@ begin
   end;
 end;
 
+procedure OutputSamplesToSDL(Userdata: Pointer; Stream: PUInt8; Len: Integer); cdecl;
+var
+  a: Integer;
+begin
+  with (AudioCallbackData(Userdata^)) do
+  begin
+    a := 0;
+
+    if BufEmpty then
+    begin
+      while a < Len do
+      begin
+        PChar(Stream)[a] := Char(0);
+        Inc(a);
+      end;
+      exit;
+    end;
+
+    while a < Len do
+    begin
+      if Channels = 2 then
+      begin
+        (* Left *)
+        PChar(Stream)[a+0] := PChar(Buffer)[ReadPtr*4+0];
+        PChar(Stream)[a+1] := PChar(Buffer)[ReadPtr*4+1];
+        (* Right *)
+        PChar(Stream)[a+2] := PChar(Buffer)[ReadPtr*4+2];
+        PChar(Stream)[a+3] := PChar(Buffer)[ReadPtr*4+3];
+        Inc(a,4);
+      end
+      else
+      begin
+        (* Mono *)
+        PChar(Stream)[a+0] := PChar(Buffer)[ReadPtr*2+0];
+        PChar(Stream)[a+1] := PChar(Buffer)[ReadPtr*2+1];
+        Inc(a,2);
+      end;
+      Inc(ReadPtr);
+      if ReadPtr > BufSize-1 then ReadPtr := 0;
+      if ReadPtr = WritePtr then
+      begin
+        BufEmpty := True;
+        while a < Len do
+        begin
+          PChar(Stream)[a] := Char(0);
+          Inc(a);
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TModMain.OpenWaveOutput;
 var
-  MyStat, a: Integer;
+  MyStat: Integer;
 begin
   if WaveOutIsOpen then exit;
 
-  PMywfx^.nChannels := NumOutChans;
-  PMywfx^.nSamplesPerSec := MySettings.OutSampleRate;
-  PMywfx^.wBitsPerSample := 16;
-  PMywfx^.cbSize := 0; // size of _extra_ info, none for PCM data *
-  PMywfx^.wFormatTag := WAVE_FORMAT_PCM;
-  PMywfx^.nBlockAlign := (PMywfx^.wBitsPerSample shr 3) * PMywfx^.nChannels;
-  PMywfx^.nAvgBytesPerSec := PMywfx^.nBlockAlign * PMywfx^.nSamplesPerSec;
+  PMywfx.channels := NumOutChans;
+  PMywfx.freq := MySettings.OutSampleRate;
+  PMywfx.format := AUDIO_S16LSB;
+  PMywfx.samples := MySettings.OutSampleRate div 100;
+  PMywfx.callback := OutputSamplesToSDL;
+  MyCircBufData.BufSize := Round(CircBufSize * (MySettings.OutSampleRate / MaxSampleRate));
+  MyCircBufData.BufEmpty := True;
+  MyCircBufData.ReadPtr := 0;
+  MyCircBufData.WritePtr := 0;
+  MyCircBufData.channels := NumOutChans;
+  MyCircBufData.Buffer := PUInt8(Addr(MyCircBuf));
+  PMywfx.userdata := Addr(MyCircBufData);
 
-  (* Make sure all our headers are marked 'clean' (Closing WaveOutput might not do that for all buffers!) *)
-  for a := 0 to NumAudioBufs-1 do
-    pheader[a]^.dwFlags := WHDR_DONE;
-
-  MyStat := waveOutOpen(PMyWaveOutDev,WAVE_MAPPER,PMywfx,0,0,CALLBACK_NULL);
-  if MyStat <> MMSYSERR_NOERROR then
+  MyStat := SDL_OpenAudio(PSDL_AudioSpec(Addr(PMywfx)), NIL);
+  if MyStat < 0 then
     RunDecInfo.Items.Insert(0, 'Could not open Wave output device!')
   else
     WaveOutIsOpen := True;
@@ -604,26 +666,21 @@ begin
   if WaveOutIsOpen then
   begin
     WaveOutErrReported := False;
-    waveOutSetVolume(PMyWaveOutDev^, ((MasterVolume * $FFFF div 64) shl 16) or (MasterVolume * $FFFF div 64));
   end;
 end;
 
 procedure TModMain.CloseWaveOutput;
-var
-  a: Integer;
 begin
-  if WaveOutIsOpen and (PMyWaveOutDev <> nil) then
-  begin
-    waveOutReset(PMyWaveOutDev^); //Also marks all buffers as 'WHDR_DONE'
-    waveOutClose(PMyWaveOutDev^);
-  end
-  else
-  begin
-    (* Make sure all our headers are marked 'clean' (Closing WaveOutput might not do that for all buffers!) *)
-    for a := 0 to NumAudioBufs-1 do
-      pheader[a]^.dwFlags := WHDR_DONE;
-  end;
+  if WaveOutIsOpen then SDL_CloseAudio;
+
   WaveOutIsOpen := False;
+  (* Reset circular buffer *)
+  with MyCircBufData do
+  begin
+    ReadPtr := 0;
+    WritePtr := 0;
+    BufEmpty := True;
+  end;
 end;
 
 procedure TModMain.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -825,6 +882,7 @@ begin
 
   (* Start *)
   IO_Timer.Enabled := True;
+  SDL_PauseAudio(0);
 end;
 
 procedure TModMain.UpdateMyVolSlide(MyCh, MyTick: Integer);
@@ -1689,6 +1747,7 @@ begin
     if CBSample.ItemIndex <= 0 then
     begin
       SetMPState(MPPlayingRaw);
+      SDL_PauseAudio(0);
 
       (* play full sample once *)
       while (MyInBufCnt < MyTotalSampleSize) and (ModPlayerState = MPPlayingRaw) do
@@ -1708,6 +1767,7 @@ begin
         MyRawOffset := MyRawOffset + MySampleInfo[d-1].Length; //is really OK like this!
 
       SetMPState(MPPlayingRaw);
+      SDL_PauseAudio(0);
       with MySampleInfo[CBSample.ItemIndex-1] do
       begin
         (* Only play really existing samples *)
@@ -1753,14 +1813,10 @@ end;
 
 
 Function TModMain.AllBufsDone: Boolean;
-var
-  a: Integer;
 begin
   AllBufsDone := True;
-
-  if WaveOutIsOpen then
-    for a := 0 to NumAudioBufs-1 do
-      if pheader[a]^.dwFlags and WHDR_DONE = 0 then AllBufsDone := False;
+  if WaveOutIsOpen and not MyCircBufData.BufEmpty then
+    AllBufsDone := False;
 end;
 
 
@@ -1787,13 +1843,7 @@ begin
 end;
 
 procedure TModMain.FormDestroy(Sender: TObject);
-var
-  a: Integer;
 begin
-  for a := 0 to NumAudioBufs-1 do
-    Dispose(PHeader[a]);
-  Dispose(PMywfx);
-  Dispose(pMyWaveOutDev);
   ReAllocMem(MyPatternPtr, 0);
   ReAllocMem(MySamplesPtr, 0);
   ReAllocMem(MyTmpFileData, 0);
@@ -1820,6 +1870,10 @@ begin
   (* Remember our intputfilename plus it's path, but excluding its extension *)
   MyOpenInFile := MyFile;
   MyOpenInFile := Copy(MyOpenInFile, 1, LastDelimiter('.',MyOpenInFile) - 1);
+
+  (* Clean-up *)
+  CloseWaveOutput;
+  OpenWaveOutput;
 end;
 
 procedure TModMain.StopPlaying;
@@ -1834,7 +1888,7 @@ begin
     Application.processmessages;
     sleep(5);
   end;
-  if WaveOutIsOpen then waveOutReset(PMyWaveOutDev^); //Also marks all buffers as 'WHDR_DONE'
+  SDL_PauseAudio(1);
 
   (* End Wave file writer if it was busy *)
   if CBSaveWave.Checked then CompleteWaveFile;
@@ -1847,7 +1901,6 @@ end;
 
 function TModMain.MixAndOutputSamples(PlayRaw: Boolean): Boolean;
 var
-  MyStat,
   OutCnt,
   ChCnt     : Integer;
   MySample  : Single;
@@ -1858,14 +1911,6 @@ var
   TempVal   : Single;
 begin
   Result := True;
-
-  (* switch to next buffer *)
-  Inc(BufNr);
-  if BufNr >= NumAudioBufs then BufNr := 0;
-
-  (* we must wait for our buffer to complete if it's still busy *)
-  if WaveOutIsOpen then
-    while pheader[BufNr]^.dwFlags and WHDR_DONE = 0 do sleep(5);
 
   if Ch1On.Checked then
     ChOn[1] := True
@@ -1899,12 +1944,12 @@ begin
         begin
           (* fill both channels with the same (mono) data *)
           (* Left channel *)
-          MyConvBuf[BufNr][OutCnt*NumOutChans + 0] := Round(MyChBuf[1][OutCnt] * 0.7);
+          MyConvBuf[OutCnt*NumOutChans + 0] := Round(MyChBuf[1][OutCnt] * 0.7);
           (* Right channel *)
-          MyConvBuf[BufNr][OutCnt*NumOutChans + 1] := Round(MyChBuf[1][OutCnt] * 0.7);
+          MyConvBuf[OutCnt*NumOutChans + 1] := Round(MyChBuf[1][OutCnt] * 0.7);
         end
         else
-          MyConvBuf[BufNr][OutCnt] := Round(MyChBuf[1][OutCnt] * 0.7);
+          MyConvBuf[OutCnt] := Round(MyChBuf[1][OutCnt] * 0.7);
       end
       else
       begin
@@ -1930,8 +1975,8 @@ begin
             LeftVal  := TempVal;
           end;
           (* fill both channels with the calculated (stereo) data *)
-          MyConvBuf[BufNr][OutCnt*NumOutChans + 0] := Round(LeftVal);
-          MyConvBuf[BufNr][OutCnt*NumOutChans + 1] := Round(RightVal);
+          MyConvBuf[OutCnt*NumOutChans + 0] := Round(LeftVal);
+          MyConvBuf[OutCnt*NumOutChans + 1] := Round(RightVal);
         end
         else
         begin
@@ -1939,7 +1984,7 @@ begin
           MySample := 0;
           for ChCnt := 1 to MyMediaRec.Channels do
             if ChOn[ChCnt] then MySample := MySample + MyChBuf[ChCnt][OutCnt];
-          MyConvBuf[BufNr][OutCnt] := Round(MySample * NumOutChans / MyMediaRec.Channels);
+          MyConvBuf[OutCnt] := Round(MySample * NumOutChans / MyMediaRec.Channels);
         end;
       end;
     end;
@@ -1947,7 +1992,7 @@ begin
     (* Save buffer in file if requested *)
     if CBSaveWave.Checked then
     begin
-      WriteWaveChunk(BufNr, MyOutBufLen * NumOutChans);
+      WriteWaveChunk(MyOutBufLen * NumOutChans);
       Exit; (* Just decode and save, don't send to soundcard. *)
     end;
   end;
@@ -1969,32 +2014,38 @@ begin
     exit;
   end;
 
-  (* All buffers have the same size.. (MyOutBufLen) *)
-  PHeader[BufNr]^.lpData := PChar(Addr(MyConvBuf[BufNr]));
-  PHeader[BufNr]^.dwBufferLength := MySampleLogic[1].MyOutBufLen * 2 * NumOutChans;  //must be in bytes!
-  PHeader[BufNr]^.dwFlags := 0;  //zie MSDN specs. MMsystem vult de flags in.
-  PHeader[BufNr]^.dwLoops := 0;  //loops doen we dmv uitrollen en daarmee herhalen
-  PHeader[BufNr]^.dwBytesRecorded := 0;
-  MyStat := waveOutPrepareHeader(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
-  if MyStat <> MMSYSERR_NOERROR then
+  SDL_LockAudio;
+  for OutCnt := 0 to (MySampleLogic[1].MyOutBufLen - 1) do
   begin
-    RunDecInfo.Items.Insert(0, 'waveOutPrepareHeader returns error: '+IntToStr(Mystat)+ '.');
-    CloseWaveOutput;
-    exit;
+    MyCircBufData.BufEmpty := False;
+    if NumOutChans = 2 then
+    begin
+      (* Left *)
+      MyCircBuf[MyCircBufData.WritePtr*NumOutChans*2 + 0] := MyConvBuf[OutCnt*NumOutChans + 0] and $ff;
+      MyCircBuf[MyCircBufData.WritePtr*NumOutChans*2 + 1] := MyConvBuf[OutCnt*NumOutChans + 0] shr 8;
+      (* Right *)
+      MyCircBuf[MyCircBufData.WritePtr*NumOutChans*2 + 2] := MyConvBuf[OutCnt*NumOutChans + 1] and $ff;
+      MyCircBuf[MyCircBufData.WritePtr*NumOutChans*2 + 3] := MyConvBuf[OutCnt*NumOutChans + 1] shr 8;
+    end
+    else
+    begin
+      (* Mono *)
+      MyCircBuf[MyCircBufData.WritePtr*2 + 0] := MyConvBuf[OutCnt] and $ff;
+      MyCircBuf[MyCircBufData.WritePtr*2 + 1] := MyConvBuf[OutCnt] shr 8;
+    end;
+    Inc(MyCircBufData.WritePtr);
+    if MyCircBufData.WritePtr > MyCircBufData.BufSize-1 then MyCircBufData.WritePtr := 0;
+    if MyCircBufData.WritePtr = MyCircBufData.ReadPtr then
+    begin
+      while MyCircBufData.WritePtr = MyCircBufData.ReadPtr do
+      begin
+        SDL_UnlockAudio;
+        sleep(5);
+        SDL_LockAudio;
+      end;
+    end;
   end;
-  if pheader[BufNr]^.dwFlags and WHDR_PREPARED <> WHDR_PREPARED then
-  begin
-    RunDecInfo.Items.Insert(0, 'waveOutPrepareHeader did not prepare for buffer #' + IntToStr(BufNr+1) + '! Aborting.');
-    CloseWaveOutput;
-    exit;
-  end;
-  MyStat := waveOutWrite(PMyWaveOutDev^, pheader[BufNr], sizeof(WAVEHDR));
-  if MyStat <> MMSYSERR_NOERROR then
-  begin
-    RunDecInfo.Items.Insert(0, 'waveOutWrite did not output buffer #' + IntToStr(BufNr+1) + '! Aborting.');
-    CloseWaveOutput;
-    exit;
-  end;
+  SDL_UnlockAudio;
 end;
 
 function TModMain.PlaySample(MyCh: Integer; MySmpPtr: PInt8; MyBufLen: Integer = 0; MyFirstStart: Integer = 0;
@@ -2606,12 +2657,12 @@ begin
     rLen := 0;                       (* will be updated while writing chunks! *)
     wfId := 'WAVEfmt ';              (* ID string *)
     fLen := 16;                      (* below struct size *)
-    wFormatTag      := PMywfx^.wFormatTag;
-    nChannels       := PMywfx^.nChannels;
-    nSamplesPerSec  := PMywfx^.nSamplesPerSec;
-    nAvgBytesPerSec := PMywfx^.nAvgBytesPerSec;
-    nBlockAlign     := PMywfx^.nBlockAlign;
-    wBitsPerSample  := PMywfx^.wBitsPerSample;
+    wFormatTag      := 1;            (* WAVE_FORMAT_PCM *)
+    nChannels       := PMywfx.channels;
+    nSamplesPerSec  := PMywfx.freq;
+    wBitsPerSample  := 16;
+    nBlockAlign     := (wBitsPerSample shr 3) * PMywfx.channels;
+    nAvgBytesPerSec := nBlockAlign * PMywfx.freq;
     dId := 'data';                   (* ID string *)
     wSampleLength := 0;              (* will be updated while writing chunks! *)
   end;
@@ -2626,13 +2677,13 @@ begin
   Result := True;
 end;
 
-function TModMain.WriteWaveChunk(MyBuffer, MySize: Integer): Boolean;
+function TModMain.WriteWaveChunk(MySize: Integer): Boolean;
 begin
   Result := False;
   if TFileRec(MyWaveFile).Mode = fmClosed then exit;
 
   (* write data *)
-  BlockWrite(MyWaveFile,MyConvBuf[MyBuffer][0], MySize * 2);
+  BlockWrite(MyWaveFile,MyConvBuf[0], MySize * 2);
   with MyWaveHeader do
   begin
     wSampleLength := wSampleLength + MySize * 2;

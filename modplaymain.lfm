@@ -14,7 +14,7 @@ object ModMain: TModMain
   OnDestroy = FormDestroy
   OnDropFiles = FormDropFiles
   Position = poScreenCenter
-  LCLVersion = '2.0.12.0'
+  LCLVersion = '2.2.6.0'
   object BtnPlaySong: TBitBtn
     Left = 8
     Height = 28
