@@ -1871,9 +1871,11 @@ begin
   MyOpenInFile := MyFile;
   MyOpenInFile := Copy(MyOpenInFile, 1, LastDelimiter('.',MyOpenInFile) - 1);
 
+{$IFNDEF Haiku} (* When SDL_CloseAudio is called Haiku thinks we want to quit the application! *)
   (* Clean-up *)
   CloseWaveOutput;
   OpenWaveOutput;
+{$ENDIF}
 end;
 
 procedure TModMain.StopPlaying;

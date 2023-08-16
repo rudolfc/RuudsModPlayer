@@ -8,8 +8,8 @@
       <Unit0>
         <Filename Value="RuudsModPlayer.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
         <CursorPos X="69" Y="7"/>
         <UsageCount Value="200"/>
       </Unit0>
@@ -20,12 +20,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="ModPlayMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="1837"/>
-        <CursorPos X="16" Y="1855"/>
+        <TopLine Value="1857"/>
+        <CursorPos X="15" Y="1876"/>
         <UsageCount Value="201"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
       <Unit2>
         <Filename Value="dlg_aboutbox.pas"/>
