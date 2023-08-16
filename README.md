@@ -15,6 +15,10 @@ It's a basic player which currently has the following functionality:
 - You can play the raw samples on a fixed speed;
 - You can specify where to start the song (handy for playing i.e. game sound effects which might be included in some files).
 
+Note please:
+- App version 1.x works with Microsoft's specific MMSystem audio.
+- Version 2.x works with SDL 1.x and 2.x instead, which is multi-platform. You need to download this library yourself, see https://libsdl.org/.
+
 I guess that's about it for now.
 
 
