@@ -732,6 +732,7 @@ procedure TModMain.BtnPlaySongClick(Sender: TObject);
 begin
   if not MyMediaRec.FileLoaded then exit;
 
+  BtnPlaySong.Enabled := False;
   (* still playing 'raw' sample(s): quit that first *)
   if ModPlayerState = MPPlayingRaw then StopPlaying;
 
@@ -746,6 +747,7 @@ begin
     SetMPState(MPPlaying);
     PlayMySong;
   end;
+  BtnPlaySong.Enabled := True;
 end;
 
 procedure TModMain.cubic_synthChange(Sender: TObject);

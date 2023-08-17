@@ -12,6 +12,7 @@
         <WindowIndex Value="-1"/>
         <CursorPos X="69" Y="7"/>
         <UsageCount Value="200"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
       <Unit1>
         <Filename Value="modplaymain.pas"/>
@@ -22,9 +23,10 @@
         <UnitName Value="ModPlayMain"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="1857"/>
-        <CursorPos X="15" Y="1876"/>
+        <TopLine Value="1884"/>
+        <CursorPos X="3" Y="1887"/>
         <UsageCount Value="201"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
       <Unit2>
         <Filename Value="dlg_aboutbox.pas"/>
