@@ -552,6 +552,7 @@ begin
   SDL_VERSION(SdlVerC);
   RunDecInfo.Items.Insert(0,
     'SDL compile-time version ' + IntToStr(SdlVerC.major) + '.' + IntToStr(SdlVerC.minor) + '.' + IntToStr(SdlVerC.patch));
+  SDL_Init(SDL_INIT_AUDIO);
 
   {$IFDEF MSWINDOWS}
   RunDecInfo.Items.Insert(0, 'Windows version ' + IntToStr(Win32MajorVersion) + '.' + IntToStr(Win32MinorVersion));
@@ -696,6 +697,7 @@ begin
     (* Close soundcard output *)
     CloseWaveOutput;
   end;
+  SDL_Quit;
 
   IO_Timer.Enabled := False;
   IO_Timer.Free;
