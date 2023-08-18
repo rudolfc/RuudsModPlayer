@@ -20,7 +20,7 @@ It's a basic player which currently has the following functionality:
 Note please:
 - App version 1.x works with Microsoft's specific MMSystem audio.
 - Version 2.x works with SDL 1.x and 2.x instead, which is multi-platform. You need to download this library yourself, see https://libsdl.org/.
-  Please place the dll in the same folder the exe is in, and name it 'sdl.dll' as that exact name is what the player is looking for.
+  On Windows please place the dll in the same folder the exe is in, and name it 'sdl.dll' as that exact name is what the player is looking for.
 
 I guess that's about it for now.
 
